@@ -5,11 +5,18 @@ if (menuToggle) menuToggle.addEventListener('click', () => {
   menuToggle.setAttribute('aria-expanded', String(open));
 });
 
-window.renderGroupsChart = (groups, onGroupSelect) => {
+window.renderGroupsChart = (groups) => {
   const canvas = document.querySelector('#groups-chart');
   if (!canvas || !window.Chart) return;
   if (canvas._chartInstance) canvas._chartInstance.destroy();
-  canvas._chartInstance = new window.Chart(canvas, { type: 'bar', data: { labels: groups.map((item) => item.group), datasets: [{ label: 'Saldo em aberto', data: groups.map((item) => Number(item.amount)), backgroundColor: '#9c7550', borderRadius: 4 }] }, options: { onClick: (_event, elements) => { if (elements.length && onGroupSelect) onGroupSelect(groups[elements[0].index]); }, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => 'R$ ' + ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => 'R$ ' + Number(value).toLocaleString('pt-BR') } } } } });
+  const receivablesUrl = canvas.dataset.groupReceivablesUrl;
+  const openGroupReceivables = (elements) => {
+    const group = groups[elements[0]?.index];
+    if (group?.group_id != null && receivablesUrl) {
+      window.location.assign(`${receivablesUrl}?group=${encodeURIComponent(group.group_id)}`);
+    }
+  };
+  canvas._chartInstance = new window.Chart(canvas, { type: 'bar', data: { labels: groups.map((item) => item.group), datasets: [{ label: 'Saldo devido', data: groups.map((item) => Number(item.amount)), backgroundColor: '#9c7550', borderRadius: 4 }] }, options: { onClick: (_event, elements) => openGroupReceivables(elements), onHover: (_event, elements) => { const group = groups[elements[0]?.index]; canvas.style.cursor = group?.group_id != null ? 'pointer' : 'default'; }, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => 'R$ ' + ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => 'R$ ' + Number(value).toLocaleString('pt-BR') } } } } });
 };
 
 window.renderCustomersChart = (customers, groupName) => {
@@ -18,7 +25,13 @@ window.renderCustomersChart = (customers, groupName) => {
   const title = document.querySelector('#customers-chart-title');
   if (title) title.textContent = '10 maiores devedores — ' + groupName;
   if (canvas._chartInstance) canvas._chartInstance.destroy();
-  canvas._chartInstance = new window.Chart(canvas, { type: 'bar', data: { labels: customers.map((item) => item.customer), datasets: [{ label: 'Saldo em aberto', data: customers.map((item) => Number(item.amount)), backgroundColor: '#3987e5', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => 'R$ ' + ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => 'R$ ' + Number(value).toLocaleString('pt-BR') } } } } });
+  const shortenName = (name, limit = 24) => name.length > limit ? `${name.slice(0, limit - 1).trimEnd()}…` : name;
+  const detailUrl = canvas.dataset.customerDetailUrl;
+  const openCustomerDetail = (elements) => {
+    const customer = customers[elements[0]?.index];
+    if (customer && detailUrl) window.location.assign(detailUrl.replace('/0/', `/${customer.customer_id}/`));
+  };
+  canvas._chartInstance = new window.Chart(canvas, { type: 'bar', data: { labels: customers.map((item) => shortenName(item.customer)), datasets: [{ label: 'Saldo em aberto', data: customers.map((item) => Number(item.amount)), backgroundColor: '#3987e5', borderRadius: 4 }] }, options: { onClick: (_event, elements) => openCustomerDetail(elements), onHover: (_event, elements) => { canvas.style.cursor = elements.length ? 'pointer' : 'default'; }, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => customers[items[0].dataIndex]?.customer || '', label: (ctx) => 'R$ ' + ctx.raw.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => 'R$ ' + Number(value).toLocaleString('pt-BR') } } } } });
 };
 
 window.renderStateComparisonChart = (states) => {

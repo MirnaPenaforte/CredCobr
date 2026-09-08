@@ -26,7 +26,7 @@
         <a href="{% url 'receivable-list' %}">Boletos</a>
         <a href="{% url 'report-list' %}">Relatórios</a>
         {% for state in navigation_states %}<a href="{% url 'state-dashboard' state.code %}">Dashboard {{ state.code }}</a>{% endfor %}
-        {% if request.user.role == "administrator" or request.user.is_superuser %}<a href="{% url 'admin:accounts_user_changelist' %}">Usuários</a>{% endif %}
+        {% if request.user.role == "administrator" or request.user.is_superuser %}<a href="{% url 'user-list' %}">Usuários</a>{% endif %}
       </nav>
     </aside>
     {% endif %}
@@ -38,7 +38,7 @@
   {% if request.user.is_authenticated and request.resolver_match.url_name != 'login' %}
   <footer class="footer">CRED-COBR · Dados internos</footer>
   {% endif %}
-  <script src="{% static 'js/app.js' %}?v=20260903-2" type="module"></script>
+  <script src="{% static 'js/app.js' %}?v=20260908-3" type="module"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

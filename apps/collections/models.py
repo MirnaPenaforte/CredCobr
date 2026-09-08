@@ -15,6 +15,7 @@ class CollectionStatus(TimestampedModel):
         PAID = "paid", "Pago"
         UNREACHABLE = "unreachable", "Nao localizado"
         BROKEN_PROMISE = "broken_promise", "Promessa não cumprida"
+        BROKEN_AGREEMENT = "broken_agreement", "Acordo não cumprido"
 
     receivable = models.OneToOneField("receivables.Receivable", on_delete=models.PROTECT, related_name="collection_status")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

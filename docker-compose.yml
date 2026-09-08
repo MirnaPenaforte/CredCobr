@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: cred_cobr
       POSTGRES_USER: cred_cobr
       POSTGRES_PASSWORD: change-me-local-only
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

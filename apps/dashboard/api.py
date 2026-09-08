@@ -17,11 +17,15 @@ class DashboardSummaryView(APIView):
 
 class DashboardTopGroupsView(APIView):
     def get(self, request):
-        receivables = filter_by_state_scope(Receivable.objects.select_related("customer__economic_group"), request.user)
+        receivables = filter_by_state_scope(
+            Receivable.objects.select_related("customer__economic_group").prefetch_related("payment_promises", "agreements__installments"), request.user
+        )
         return Response([{**item, "amount": str(item["amount"])} for item in top_groups(receivables)])
 
 
 class DashboardTopCustomersView(APIView):
     def get(self, request):
-        receivables = filter_by_state_scope(Receivable.objects.select_related("customer__economic_group"), request.user)
+        receivables = filter_by_state_scope(
+            Receivable.objects.select_related("customer__economic_group").prefetch_related("payment_promises", "agreements__installments"), request.user
+        )
         return Response([{**item, "amount": str(item["amount"])} for item in top_general_customers(receivables)])

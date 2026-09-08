@@ -18,7 +18,7 @@ from apps.companies.models import Company, EconomicGroup, State
 from apps.customers.models import Customer
 from apps.imports.models import ImportBatch
 from apps.notifications.models import Notification
-from apps.processing.services import calculate_indicators, calculate_overdue_days, calculate_receivable_overdue_days, calculate_overdue_bands, classify_overdue_days, consolidate_by_state, top_customers_by_group, top_groups
+from apps.processing.services import calculate_indicators, calculate_overdue_days, calculate_receivable_overdue_days, calculate_overdue_bands, classify_overdue_days, consolidate_by_state, top_general_customers, top_groups
 from apps.receivables.models import Receivable
 from apps.reports.models import ReportExecution
 from shared.dates import format_date, parse_date
@@ -59,21 +59,15 @@ def home(request):
 def state_dashboard(request, code: str):
     state = get_object_or_404(State, code=code.upper())
     receivables = list(filter_by_state_scope(
-        Receivable.objects.select_related("company__state", "customer__economic_group"), request.user
+        Receivable.objects.select_related("company__state", "customer__economic_group")
+        .prefetch_related("payment_promises", "agreements__installments"), request.user
     ).filter(company__state=state))
     groups = top_groups(receivables)
-    customers_by_group = {
-        str(group["group_id"] if group["group_id"] is not None else "none"):
-        top_customers_by_group(receivables, group["group_id"])
-        for group in groups
-    }
-    selected_group = groups[0] if groups else {"group": "", "group_id": None}
     return render(request, "dashboard/state.html", {
         "state": state,
         "indicators": calculate_indicators(receivables, date.today()),
         "groups": groups,
-        "customers_by_group": customers_by_group,
-        "selected_group": selected_group,
+        "general_customers": top_general_customers(receivables, reference_date=date.today()),
     })
 
 
@@ -246,14 +240,17 @@ def customer_receivables_detail(request, pk: int):
         else:
             item.overdue_color, item.overdue_label = "", ""
         collection = getattr(item, "collection_status", None)
-        if any(agreement.status == PaymentAgreement.Status.ACTIVE for agreement in item.agreements.all()):
+        if collection and collection.status in {
+            CollectionStatus.Status.BROKEN_PROMISE,
+            CollectionStatus.Status.BROKEN_AGREEMENT,
+        }:
+            item.collection_label, item.collection_icon, item.collection_key = "Inadimplente", "!", "broken-promise"
+        elif any(agreement.status == PaymentAgreement.Status.ACTIVE for agreement in item.agreements.all()):
             item.collection_label, item.collection_icon, item.collection_key = "Acordo", "🤝", "agreement"
         elif collection and collection.status == CollectionStatus.Status.PROMISE:
             item.collection_label, item.collection_icon, item.collection_key = "Promessa", "✓", "promise"
         elif collection and collection.status == CollectionStatus.Status.NEGOTIATING:
             item.collection_label, item.collection_icon, item.collection_key = "Negociado", "↔", "negotiating"
-        elif collection and collection.status == CollectionStatus.Status.BROKEN_PROMISE:
-            item.collection_label, item.collection_icon, item.collection_key = "Inadimplente", "!", "broken-promise"
         else:
             item.collection_label, item.collection_icon, item.collection_key = "Em aberto", "○", "open"
     negotiation_operations = []

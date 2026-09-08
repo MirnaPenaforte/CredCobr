@@ -13,7 +13,8 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.audit.services import record_audit
-from apps.collections.models import CollectionStatus, PaymentPromise
+from apps.collections.models import AgreementInstallment, CollectionStatus, PaymentAgreement, PaymentPromise
+from apps.notifications.email import send_commitment_default_alert
 from shared.dates import format_date
 
 from .locking import task_lock
@@ -105,9 +106,42 @@ def verify_expired_promises(self: Any) -> dict[str, object]:
             collection.status = CollectionStatus.Status.BROKEN_PROMISE
             collection.notes = "Promessa de pagamento não cumprida."
             collection.save(update_fields=["status", "notes", "updated_at"])
+            send_commitment_default_alert(
+                operator=promise.receivable.operator or promise.created_by,
+                receivable=promise.receivable,
+                commitment_type="Promessa de pagamento",
+                commitment_id=promise.pk,
+            )
 
-        logger.info("verify_expired_promises_completed task_id=%s count=%s", self.request.id, count)
-        return {"status": "completed", "expired_count": count}
+        overdue_installments = AgreementInstallment.objects.select_related(
+            "agreement__receivable__customer", "agreement__receivable__operator", "agreement__created_by"
+        ).filter(
+            agreement__status=PaymentAgreement.Status.ACTIVE,
+            due_date__lt=today,
+            paid_at__isnull=True,
+        ).order_by("agreement_id", "due_date")
+        broken_agreement_ids: set[int] = set()
+        for installment in overdue_installments:
+            agreement = installment.agreement
+            if agreement.pk in broken_agreement_ids:
+                continue
+            broken_agreement_ids.add(agreement.pk)
+            collection, _ = CollectionStatus.objects.get_or_create(receivable=agreement.receivable)
+            collection.status = CollectionStatus.Status.BROKEN_AGREEMENT
+            collection.notes = "Acordo não cumprido: existe parcela vencida sem pagamento."
+            collection.save(update_fields=["status", "notes", "updated_at"])
+            send_commitment_default_alert(
+                operator=agreement.receivable.operator or agreement.created_by,
+                receivable=agreement.receivable,
+                commitment_type="Acordo",
+                commitment_id=agreement.pk,
+            )
+
+        logger.info(
+            "verify_expired_promises_completed task_id=%s promises=%s agreements=%s",
+            self.request.id, count, len(broken_agreement_ids),
+        )
+        return {"status": "completed", "expired_count": count, "broken_agreement_count": len(broken_agreement_ids)}
 
 
 @shared_task(bind=True, name="core.tasks.run_daily_backup")

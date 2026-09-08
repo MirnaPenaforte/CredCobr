@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from typing import Iterable
 
 from django.db.models import QuerySet
 
+from apps.collections.models import PaymentAgreement, PaymentPromise
 from apps.receivables.models import Receivable
 
 
@@ -114,16 +115,63 @@ def consolidate_by_state(receivables: Iterable[Receivable], reference_date: date
     return {state: calculate_indicators(items, reference_date) for state, items in grouped.items()}
 
 
-def top_groups(receivables: Iterable[Receivable], limit: int = 10) -> list[dict[str, object]]:
+def _commitment_is_current(receivable: Receivable, reference_date: date) -> bool:
+    """Return whether a title is covered by a promise or agreement without delay."""
+    promises = receivable.payment_promises.all() if hasattr(receivable, "payment_promises") else []
+    if any(
+        promise.status == PaymentPromise.Status.PENDING and promise.promised_date >= reference_date
+        for promise in promises
+    ):
+        return True
+
+    agreements = receivable.agreements.all() if hasattr(receivable, "agreements") else []
+    for agreement in agreements:
+        if agreement.status != PaymentAgreement.Status.ACTIVE:
+            continue
+        installments = agreement.installments.all() if hasattr(agreement, "installments") else []
+        has_overdue_installment = any(
+            installment.due_date < reference_date and installment.paid_at is None
+            for installment in installments
+        )
+        if not has_overdue_installment:
+            return True
+    return False
+
+
+def _eligible_debtor_receivables(receivables: Iterable[Receivable], reference_date: date) -> list[Receivable]:
+    """Return overdue debt from customers not protected by a current commitment.
+
+    A commitment is current when its payment date/next installment has not passed.
+    The exclusion is customer-wide in the selected dashboard scope, so a customer
+    with an agreement or promise being honored is not ranked as a debtor.
+    """
+    items = list(receivables)
+    customers_with_current_commitment = {
+        item.customer_id for item in items if _commitment_is_current(item, reference_date)
+    }
+    cutoff = reference_date - timedelta(days=30)
+    return [
+        item for item in items
+        if item.customer_id not in customers_with_current_commitment
+        and item.due_date < cutoff
+        and item.financial_status in {item.FinancialStatus.OPEN, item.FinancialStatus.PARTIALLY_PAID}
+        and item.balance_with_interest > 0
+    ]
+
+
+def top_groups(
+    receivables: Iterable[Receivable], limit: int = 10, reference_date: date | None = None
+) -> list[dict[str, object]]:
+    reference_date = reference_date or date.today()
     totals: dict[int | None, Decimal] = defaultdict(lambda: Decimal("0"))
     names: dict[int | None, str] = {}
-    for item in receivables:
+    for item in _eligible_debtor_receivables(receivables, reference_date):
         group_id = item.customer.economic_group_id
-        totals[group_id] += item.outstanding_amount
+        totals[group_id] += item.balance_with_interest
         names[group_id] = item.customer.economic_group.name if item.customer.economic_group else "SEM GRUPO"
     return [
         {"group_id": group_id, "group": names[group_id], "amount": amount}
-        for group_id, amount in sorted(totals.items(), key=lambda pair: pair[1], reverse=True)[:limit]
+        for group_id, amount in sorted(totals.items(), key=lambda pair: (-pair[1], names[pair[0]]))[:limit]
     ]
 
 
@@ -142,15 +190,18 @@ def top_customers_by_group(
     ]
 
 
-def top_general_customers(receivables: Iterable[Receivable], limit: int = 10) -> list[dict[str, object]]:
+def top_general_customers(
+    receivables: Iterable[Receivable], limit: int = 10, reference_date: date | None = None
+) -> list[dict[str, object]]:
+    reference_date = reference_date or date.today()
     totals: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
     names: dict[int, str] = {}
-    for item in receivables:
-        group = item.customer.economic_group.name if item.customer.economic_group else ""
-        if group == "CLIENTES GERAL":
-            totals[item.customer_id] += item.outstanding_amount
+    for item in _eligible_debtor_receivables(receivables, reference_date):
+        group = item.customer.economic_group.name.strip().casefold() if item.customer.economic_group else ""
+        if group == "clientes geral":
+            totals[item.customer_id] += item.balance_with_interest
             names[item.customer_id] = item.customer.name
     return [
         {"customer_id": customer_id, "customer": names[customer_id], "amount": amount}
-        for customer_id, amount in sorted(totals.items(), key=lambda pair: pair[1], reverse=True)[:limit]
+        for customer_id, amount in sorted(totals.items(), key=lambda pair: (-pair[1], names[pair[0]]))[:limit]
     ]

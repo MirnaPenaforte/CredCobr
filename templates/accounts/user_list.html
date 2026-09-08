@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Usuários | CRED-COBR{% endblock %}
+{% block content %}
+<div class="page-heading users-heading">
+  <div><p class="eyebrow">ADMINISTRAÇÃO DO SISTEMA</p><h1>Gestão de usuários</h1><p class="muted">Cadastre acessos, atribua papéis e mantenha a equipe do CRED-COBR atualizada.</p></div>
+  <a class="btn btn-primary" href="{% url 'user-create' %}">+ Novo usuário</a>
+</div>
+
+<form class="filter-bar user-filter-bar" method="get" aria-label="Filtros de usuários">
+  <label class="user-search" for="id_q">Buscar usuário<input id="id_q" name="q" value="{{ query }}" placeholder="Nome, e-mail, usuário ou WhatsApp"></label>
+  <label for="id_role">Papel<select id="id_role" name="role"><option value="">Todos os papéis</option>{% for value, label in role_choices %}<option value="{{ value }}" {% if selected_role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label for="id_status">Situação<select id="id_status" name="status"><option value="">Todos</option><option value="active" {% if selected_status == "active" %}selected{% endif %}>Ativo</option><option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inativo</option></select></label>
+  <div class="filter-actions"><a class="btn btn-ghost" href="{% url 'user-list' %}">Limpar</a><button class="btn btn-gold" type="submit">Aplicar</button></div>
+</form>
+
+<section class="panel user-list-panel">
+  <div class="panel-heading"><div><p class="eyebrow">ACESSOS CADASTRADOS</p><h2>{{ users|length }} usuário{{ users|length|pluralize:"s" }}</h2></div></div>
+  <div class="table-wrap user-table-wrap"><table class="user-table"><thead><tr><th>Usuário</th><th>Contato</th><th>Papel no sistema</th><th>Situação</th><th>Último acesso</th><th aria-label="Ações"></th></tr></thead><tbody>
+  {% for managed_user in users %}<tr>
+    <td><strong>{{ managed_user.get_full_name|default:managed_user.username }}</strong><small>@{{ managed_user.username }}</small></td>
+    <td>{% if managed_user.email %}{{ managed_user.email }}{% else %}<span class="muted">E-mail não informado</span>{% endif %}<small>{{ managed_user.whatsapp_number|default:"WhatsApp não informado" }}</small></td>
+    <td><span class="role-badge role-{{ managed_user.role }}">{{ managed_user.get_role_display }}</span>{% if managed_user.is_superuser %}<small>Superusuário</small>{% endif %}</td>
+    <td><span class="status-pill {% if managed_user.is_active %}status-active{% else %}status-inactive{% endif %}">{% if managed_user.is_active %}Ativo{% else %}Inativo{% endif %}</span></td>
+    <td>{% if managed_user.last_login %}{{ managed_user.last_login|date:"d/m/Y H:i" }}{% else %}<span class="muted">Nunca acessou</span>{% endif %}</td>
+    <td><div class="user-actions"><a href="{% url 'user-update' managed_user.pk %}">Editar</a><a href="{% url 'user-password' managed_user.pk %}">Senha</a><form method="post" action="{% url 'user-toggle-active' managed_user.pk %}">{% csrf_token %}<button type="submit">{% if managed_user.is_active %}Desativar{% else %}Ativar{% endif %}</button></form>{% if managed_user != request.user %}<form method="post" action="{% url 'user-delete' managed_user.pk %}" onsubmit="return confirm('Remover o usuário {{ managed_user.username }}? Esta ação não pode ser desfeita.');">{% csrf_token %}<button class="danger-action" type="submit">Remover</button></form>{% endif %}</div></td>
+  </tr>{% empty %}<tr><td colspan="6" class="empty">Nenhum usuário encontrado para estes filtros.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "create" %}Novo usuário{% else %}Editar usuário{% endif %} | CRED-COBR{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">ADMINISTRAÇÃO DO SISTEMA</p><h1>{% if mode == "create" %}Cadastrar usuário{% else %}Editar {{ managed_user.get_full_name|default:managed_user.username }}{% endif %}</h1><p class="muted">{% if mode == "create" %}Defina os dados de acesso e o papel deste novo membro da equipe.{% else %}Atualize dados cadastrais, papel e situação de acesso.{% endif %}</p></div><a class="btn btn-quiet" href="{% url 'user-list' %}">Voltar para usuários</a></div>
+<section class="panel user-form-panel"><form method="post" data-prevent-double-submit novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-section"><h2>Dados do usuário</h2><div class="form-grid">
+    <div class="field-wide">{{ form.username.label_tag }}{{ form.username }}{{ form.username.errors }}</div>
+    <div>{{ form.first_name.label_tag }}{{ form.first_name }}{{ form.first_name.errors }}</div>
+    <div>{{ form.last_name.label_tag }}{{ form.last_name }}{{ form.last_name.errors }}</div>
+    <div>{{ form.email.label_tag }}{{ form.email }}{{ form.email.errors }}</div>
+    <div>{{ form.whatsapp_number.label_tag }}{{ form.whatsapp_number }}{{ form.whatsapp_number.errors }}<small>Formato internacional. Ex.: +5585999999999</small></div>
+  </div></div>
+  <div class="form-section"><h2>Acesso e papel</h2><div class="form-grid">
+    <div>{{ form.role.label_tag }}{{ form.role }}{{ form.role.errors }}<small>Administradores podem gerir usuários e acessar todas as funções. Gestores têm acesso operacional.</small></div>
+    {% if mode == "update" %}<div class="check-field">{{ form.is_active }}<label for="{{ form.is_active.id_for_label }}">Usuário ativo</label>{{ form.is_active.errors }}<small>Usuários inativos não conseguem entrar no sistema.</small></div>{% else %}<div class="form-spacer" aria-hidden="true"></div>{% endif %}
+    {% if mode == "create" %}<div class="password-field">{{ form.password1.label_tag }}{{ form.password1 }}{{ form.password1.errors }}<small class="password-help">{{ form.password1.help_text }}</small></div><div class="password-field">{{ form.password2.label_tag }}{{ form.password2 }}{{ form.password2.errors }}</div>{% endif %}
+  </div></div>
+  <div class="form-actions"><a class="btn btn-ghost" href="{% url 'user-list' %}">Cancelar</a><button class="btn btn-primary" type="submit">{% if mode == "create" %}Cadastrar usuário{% else %}Salvar alterações{% endif %}</button></div>
+</form></section>
+{% endblock %}
