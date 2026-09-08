@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multifoco Representações — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- ============================================================
+     CSS DA APLICAÇÃO — base adaptada do bloco <style> de
+     Dashboard_Multifoco_v2.html. A estrutura, classes e comportamentos foram preservados; apenas os tokens
+     e superfícies de cor foram ajustados para o tema claro.
+     ============================================================ -->
+<style>
+  :root {
+    --page: #F5F2ED;
+    --surface: #FFFFFF;
+    --surface-2: #ECE7E0;
+    --ink-primary: #1F1B17;
+    --ink-secondary: #5D554E;
+    --ink-muted: #7A7067;
+    --gridline: #D8D0C7;
+    --border: rgba(68,55,44,0.16);
+    --gold: #6E4B2E;
+    --gold-light: #9c7550;
+    --series-movel: #3987e5;
+    --series-ativo: #008300;
+    --series-televendas: #d55181;
+    --series-ol: #c98500;
+    --series-abs: #9b6bd6;
+    --sem-canal: #898781;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --font-display: 'Montserrat', system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: 'Source Sans 3', system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page);
+    color: var(--ink-primary);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  ::selection { background: var(--gold); color: #fff; }
+
+  /* ---------- Header ---------- */
+  header.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #FFFDF9 0%, #F5F2ED 100%);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand .mark {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .brand .titles h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 19px;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  .brand .titles p {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .mes-corrente-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 14.5px;
+    color: var(--ink-secondary);
+  }
+
+  .mes-corrente-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--warning);
+  }
+
+  .mes-corrente-badge strong { color: var(--ink-primary); font-weight: 600; }
+
+  /* ---------- Tabs ---------- */
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 28px;
+    background: var(--page);
+    border-bottom: 1px solid var(--border);
+  }
+
+  nav.tabs button {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15.5px;
+    letter-spacing: 0.3px;
+    padding: 14px 18px 12px;
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    transition: color .15s ease, border-color .15s ease;
+  }
+
+  nav.tabs button:hover { color: var(--ink-secondary); }
+
+  nav.tabs button.active {
+    color: var(--ink-primary);
+    border-bottom-color: var(--gold-light);
+  }
+
+  /* ---------- Layout ---------- */
+  main.view { display: none; padding: 22px 28px 60px; max-width: 1600px; margin: 0 auto; }
+  main.view.active { display: block; }
+
+  /* ---------- Filter bar ---------- */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 22px;
+  }
+
+  .filter-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+  }
+
+  .filter-field label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .filter-field select {
+    appearance: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink-primary);
+    padding: 8px 30px 8px 10px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23898781'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+
+  .filter-field select:focus { outline: 1.5px solid var(--gold-light); }
+
+  .filter-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-actions .btn {
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+
+  .filter-actions .btn-gold {
+    background: var(--gold);
+  }
+  .filter-actions .btn-gold:hover { background: var(--gold-light); filter: none; }
+
+  /* ---------- Cascade group (Período: Ano / Trimestre / Mês) ---------- */
+  .filter-group-cascade {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .filter-group-cascade > .group-label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .filter-group-cascade > .group-fields {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: rgba(110,75,46,0.035);
+  }
+
+  .filter-group-cascade .filter-field { min-width: 120px; }
+
+  /* ---------- Multi-select dropdown component ---------- */
+  .ms-wrap { position: relative; }
+
+  .ms-button {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink-primary);
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .ms-button:hover { border-color: rgba(68,55,44,0.28); }
+  .ms-wrap.open .ms-button { outline: 1.5px solid var(--gold-light); }
+
+  .ms-button-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
+  }
+
+  .ms-caret {
+    color: var(--ink-muted);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .ms-clear {
+    color: var(--ink-muted);
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    padding: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .ms-clear:hover { color: var(--critical); background: rgba(110,75,46,0.08); }
+
+  .ms-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 230px;
+    max-width: 320px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    box-shadow: 0 12px 28px rgba(67,52,39,0.16);
+    padding: 8px;
+    z-index: 100;
+  }
+
+  .ms-wrap.open .ms-panel { display: block; }
+
+  .ms-search {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink-primary);
+    padding: 7px 9px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    margin-bottom: 6px;
+  }
+
+  .ms-panel-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 2px 6px;
+    border-bottom: 1px solid var(--gridline);
+    margin-bottom: 4px;
+  }
+
+  .ms-link {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--gold-light);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+
+  .ms-link:hover { text-decoration: underline; }
+
+  .ms-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .ms-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px;
+    border-radius: 5px;
+    font-size: 15px;
+    color: var(--ink-secondary);
+    cursor: pointer;
+  }
+
+  .ms-option:hover { background: rgba(110,75,46,0.06); color: var(--ink-primary); }
+
+  .ms-option input { accent-color: var(--gold-light); cursor: pointer; }
+
+  .ms-empty {
+    padding: 10px 6px;
+    color: var(--ink-muted);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--ink-primary);
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  .btn:hover { background: #E2DBD2; border-color: rgba(68,55,44,0.24); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    border-color: transparent;
+    color: #fff;
+  }
+
+  .btn-gold:hover { filter: brightness(1.08); }
+
+  .btn-ghost {
+    background: transparent;
+  }
+
+  /* ---------- Validation panel ---------- */
+  .validation-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 2px;
+    margin-bottom: 10px;
+    color: var(--ink-muted);
+    font-size: 13.5px;
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+  }
+  .validation-toggle-row:hover { color: var(--ink-secondary); }
+  .validation-toggle-row .validation-toggle-icon {
+    display: inline-block;
+    font-size: 11px;
+    transition: transform .15s ease;
+  }
+  .validation-toggle-row.expanded .validation-toggle-icon { transform: rotate(90deg); }
+
+  .validation-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .validation-panel.collapsed { display: none; }
+
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .stat-tile .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .stat-tile .stat-value {
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink-primary);
+    text-align: center;
+  }
+
+  .stat-tile .stat-check {
+    margin-top: 8px;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .stat-check.ok { color: var(--good); }
+  .stat-check.warn { color: var(--critical); }
+  .stat-check.neutral { color: var(--ink-muted); }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+    margin: 32px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-primary);
+  }
+
+  .section-title .idx {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--gold);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 800;
+  }
+
+  /* Ocultar/expandir etapa (Sprint adicional 4) — ícone à direita do título de cada Bloco */
+  .section-toggle-icon {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: transform .15s ease, color .15s ease;
+  }
+  .section-toggle-icon:hover { color: var(--ink-secondary); }
+  .section-toggle-icon.collapsed { transform: rotate(-90deg); }
+  .section-body.collapsed { display: none; }
+
+  .placeholder-block {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 34px 20px;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 15px;
+  }
+
+  .placeholder-block .sprint-tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--ink-secondary);
+    font-weight: 600;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 980px) { .grid-2, .grid-4 { grid-template-columns: 1fr; } }
+  .grid-2.collapsed { display: none; }
+
+  /* ---------- Bloco 1 layout ---------- */
+  .bloco1-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.9fr) 1.6fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 1100px) { .bloco1-grid { grid-template-columns: 1fr; } }
+
+  .kpi-col { display: flex; flex-direction: column; gap: 16px; }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+  }
+
+  .kpi-card .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  .kpi-card .kpi-value {
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .kpi-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+  .kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kpi-badge.up { background: rgba(12,163,12,0.15); color: var(--good); }
+  .kpi-badge.down { background: rgba(208,59,59,0.15); color: var(--critical); }
+  .kpi-badge.flat { background: rgba(137,135,129,0.15); color: var(--ink-muted); }
+  .kpi-badge .badge-tag { opacity: 0.75; font-weight: 600; }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .chart-card .chart-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .chart-card .chart-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink-primary);
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chart-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    color: var(--ink-secondary);
+  }
+
+  .chart-legend .legend-swatch {
+    width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+  }
+
+  .chart-tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--ink-primary);
+    box-shadow: 0 8px 22px rgba(67,52,39,0.18);
+    z-index: 200;
+    display: none;
+    line-height: 1.5;
+  }
+
+  .chart-tooltip .tt-title { font-weight: 700; margin-bottom: 3px; font-family: var(--font-display); }
+
+  /* ---------- Gauges (Meta x Realizado / Atendimento) ---------- */
+  .gauge-row { display: flex; align-items: center; gap: 12px; }
+  .gauge-track {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
+  .gauge-fill.good { background: var(--good); }
+  .gauge-fill.warning { background: var(--warning); }
+  .gauge-fill.critical { background: var(--critical); }
+  .gauge-pct { font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
+
+  .no-meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .coverage-total {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  .coverage-total .coverage-total-row {
+    display: flex; justify-content: space-between;
+    font-size: 14.5px; font-weight: 700; color: var(--ink-primary); margin-bottom: 6px;
+  }
+
+  .meta-scroll { max-height: 320px; overflow-y: auto; padding-right: 4px; }
+
+  .meta-empty-note {
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 14.5px;
+    padding: 16px 10px;
+  }
+
+  .meta-vendor-table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin-top: 6px; }
+  .meta-vendor-table th {
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  .meta-vendor-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--gridline);
+    color: var(--ink-secondary);
+    vertical-align: middle;
+  }
+  .meta-vendor-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Bloco 2 / Bloco 3 layout ---------- */
+  .grid-3 { display: grid; grid-template-columns: 0.9fr 1.5fr; gap: 16px; }
+  @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr; } }
+
+  .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .donut-center-label {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--ink-muted); font-weight: 600;
+  }
+  .donut-center-value {
+    font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 700; color: var(--ink-primary);
+  }
+  .donut-sub-note { font-size: 13px; color: var(--ink-muted); text-align: center; }
+
+  .alert-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    background: rgba(208,59,59,0.15); color: var(--critical);
+  }
+  .alert-badge.ok { background: rgba(12,163,12,0.12); color: var(--good); }
+
+  .churn-table-wrap { max-height: 360px; overflow-y: auto; }
+  .churn-table, .ranking-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .churn-table th, .ranking-table th {
+    position: sticky; top: 0; background: var(--surface); text-align: left; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-muted); font-weight: 600;
+    padding: 6px 8px; border-bottom: 1px solid var(--gridline); cursor: pointer; user-select: none;
+  }
+  .churn-table th:hover, .ranking-table th:hover { color: var(--ink-secondary); }
+  .churn-table th .sort-arrow, .ranking-table th .sort-arrow { font-size: 11px; opacity: 0.6; margin-left: 3px; }
+  .churn-table td, .ranking-table td { padding: 7px 8px; border-bottom: 1px solid var(--gridline); color: var(--ink-secondary); vertical-align: middle; }
+  .churn-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .churn-table td:nth-child(2), .churn-table th:nth-child(2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ranking-table td.num { font-variant-numeric: tabular-nums; }
+
+  /* Equipe (ranking): todos os cabeçalhos centralizados; dados centralizados exceto a coluna Setor/Vendedor */
+  .ranking-table th { text-align: center; }
+  .ranking-table td { text-align: center; }
+  .ranking-table td:nth-child(2) { text-align: left; }
+
+  /* Venda por Produto: checkbox (1ª) e Laboratório (2ª) centralizados; descrição do produto (3ª) alinhada à esquerda */
+  .produto-table th:nth-child(2), .produto-table td:nth-child(2) { text-align: center; }
+  .produto-table th:nth-child(3), .produto-table td:nth-child(3) { text-align: left; }
+  .produto-table .select-col { width: 34px; text-align: center !important; }
+  .produto-select-cb, .produto-select-all { width: 15px; height: 15px; cursor: pointer; accent-color: var(--gold-light); vertical-align: middle; }
+  .produto-selection-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 14px; margin-bottom: 10px; font-size: 13px; color: var(--ink-secondary);
+  }
+  .produto-selection-bar strong { color: var(--ink-primary); }
+  .produto-selection-bar .btn-link-clear {
+    margin-left: auto; background: none; border: none; color: var(--gold-light);
+    font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0;
+  }
+  .churn-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .churn-badge.ativo { background: rgba(12,163,12,0.15); color: var(--good); }
+  .churn-badge.atencao { background: rgba(250,178,25,0.15); color: var(--warning); }
+  .churn-badge.risco { background: rgba(236,131,90,0.18); color: var(--serious); }
+  .churn-badge.perdido { background: rgba(208,59,59,0.15); color: var(--critical); }
+  .btn-export-churn { padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; flex-shrink: 0; }
+
+  .ranking-pos { color: var(--ink-muted); font-variant-numeric: tabular-nums; width: 28px; }
+  .troca-badge {
+    display: inline-block; margin-left: 6px; cursor: help; font-size: 13px;
+  }
+  .ranking-section-label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-muted);
+    font-weight: 600; margin: 14px 0 6px;
+  }
+
+  .churn-search {
+    width: 100%; padding: 7px 10px; margin-bottom: 8px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-primary); font-size: 14.5px;
+  }
+  .churn-search:focus { outline: 1.5px solid var(--gold-light); }
+  .churn-count-note { font-size: 13px; color: var(--ink-muted); margin-top: 6px; text-align: right; }
+
+  .flow-legend-note { font-size: 13px; color: var(--ink-muted); text-align: center; margin-top: 8px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(44,34,27,0.35);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 26px;
+    width: 460px;
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(67,52,39,0.22);
+  }
+  .modal-box h3 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .modal-sub {
+    font-size: 14.5px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin: 0 0 18px;
+  }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .modal-field select, .modal-field input[type="text"], .modal-field input[type="number"], .modal-field input[type="file"] {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink-primary);
+    padding: 9px 10px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    text-align: center;
+  }
+  .modal-lab-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .modal-lab-row label {
+    flex: 1;
+    font-size: 14.5px;
+    color: var(--ink-secondary);
+    text-align: right;
+  }
+  .modal-lab-row input {
+    width: 130px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink-primary);
+    padding: 7px 9px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .modal-box { position: relative; }
+  .modal-close:hover { color: var(--ink-primary); }
+  .modal-note {
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .modal-step {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  footer.app-footer {
+    padding: 18px 28px 30px;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 13.5px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  table.data-table th {
+    text-align: left;
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-muted);
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  table.data-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gridline);
+    color: var(--ink-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table tr:hover td { background: rgba(110,75,46,0.05); color: var(--ink-primary); }
+</style>
+<style>
+  /* =========================================================
+     ds-* — casca de documentação (nav fixa, linhas de spec,
+     grades de swatches). Usa exclusivamente os tokens e as
+     famílias tipográficas do CSS original acima.
+     Nenhum estilo de componente é redefinido aqui.
+     ========================================================= */
+  .ds-nav {
+    position: sticky;
+    top: 0;
+    z-index: 400;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 8px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .ds-nav a {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.3px;
+    color: var(--ink-muted);
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .ds-nav a:hover { color: var(--ink-primary); background: var(--surface-2); }
+  .ds-nav .ds-nav-brand { color: var(--gold-light); }
+
+  .ds-section { scroll-margin-top: 56px; }
+
+  .ds-note {
+    font-size: 14.5px;
+    color: var(--ink-muted);
+    margin: 0 0 16px;
+    max-width: 90ch;
+  }
+  .ds-sub {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 22px 0 10px;
+  }
+  .ds-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--gold-light);
+  }
+  .ds-row {
+    display: grid;
+    grid-template-columns: 190px 1fr 200px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gridline);
+  }
+  .ds-row:last-child { border-bottom: none; }
+  .ds-row-name {
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+  .ds-row-spec {
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 900px) {
+    .ds-row { grid-template-columns: 1fr; }
+    .ds-row-spec { text-align: left; }
+  }
+  .ds-states {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .ds-state {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 170px;
+  }
+  .ds-state > .ds-row-name { text-align: left; }
+  .ds-swatch {
+    height: 54px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .ds-truncate-box { max-width: 180px; }
+
+  /* --- utilitários de demonstração (apenas tokens do CSS original) --- */
+  .ds-bare {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+  }
+  .ds-inline-title { margin: 0 !important; }
+  .ds-mt { margin-top: 12px; }
+  .ds-mt-s { margin-top: 2px; }
+  .ds-left { text-align: left; }
+  .ds-full { width: 100%; }
+  .ds-period { font-size: 20px; }
+  .ds-state-wide { min-width: 280px; flex: 1; }
+
+  /* estados forçados — declarações idênticas às pseudo-classes originais */
+  .btn.ds-force-hover { background: #E2DBD2; border-color: rgba(68,55,44,0.24); }
+  .btn.btn-gold.ds-force-hover { filter: brightness(1.08); }
+  nav.tabs button.ds-force-hover { color: var(--ink-secondary); }
+  .churn-search.ds-force-focus, select.ds-force-focus { outline: 1.5px solid var(--gold-light); }
+
+  /* swatches de fundo */
+  .ds-bg-page { background: var(--page); }
+  .ds-bg-surface { background: var(--surface); }
+  .ds-bg-surface2 { background: var(--surface-2); }
+  .ds-bg-header { background: linear-gradient(180deg, #FFFDF9 0%, #F5F2ED 100%); }
+  .ds-bg-ink1 { background: var(--ink-primary); }
+  .ds-bg-ink2 { background: var(--ink-secondary); }
+  .ds-bg-ink3 { background: var(--ink-muted); }
+  .ds-bg-grid { background: var(--gridline); }
+  .ds-bg-gold { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); }
+
+  /* swatches de série */
+  .ds-sw-ol { background: var(--series-ol); }
+  .ds-sw-movel { background: var(--series-movel); }
+  .ds-sw-ativo { background: var(--series-ativo); }
+  .ds-sw-tele { background: var(--series-televendas); }
+  .ds-sw-abs { background: var(--series-abs); }
+  .ds-sw-sem { background: var(--sem-canal); }
+  .ds-sw-silver { background: var(--ink-secondary); }
+
+  /* larguras de gauge (o original aplica width inline via JS) */
+  .ds-w-92 { width: 92%; }
+  .ds-w-86 { width: 86%; }
+  .ds-w-84 { width: 84%; }
+  .ds-w-74 { width: 74%; }
+  .ds-w-38 { width: 38%; }
+
+  /* placeholders de área de gráfico */
+  .ds-chart-slot {
+    height: 190px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ds-donut-slot {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 22px solid var(--surface-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* superfícies e efeitos */
+  .ds-border-demo {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 14.5px;
+    color: var(--ink-secondary);
+  }
+  .ds-divider-demo { height: 1px; background: var(--gridline); margin: 14px 0; }
+  .ds-shadow-modal, .ds-shadow-panel, .ds-shadow-tooltip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 14px;
+    font-size: 14.5px;
+    color: var(--ink-secondary);
+    margin-bottom: 14px;
+  }
+  .ds-shadow-modal { border-radius: 12px; box-shadow: 0 24px 60px rgba(67,52,39,0.22); }
+  .ds-shadow-panel { border-radius: 9px; box-shadow: 0 12px 28px rgba(67,52,39,0.16); }
+  .ds-shadow-tooltip { border-radius: 7px; box-shadow: 0 8px 22px rgba(67,52,39,0.18); }
+  .ds-overlay-demo {
+    height: 90px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(44,34,27,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  /* tooltip estático para documentação */
+  .ds-tooltip-demo {
+    display: inline-block;
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--ink-primary);
+    box-shadow: 0 8px 22px rgba(67,52,39,0.18);
+    line-height: 1.5;
+  }
+  .ds-tooltip-demo .tt-title { font-weight: 700; margin-bottom: 3px; font-family: var(--font-display); }
+
+  /* modal renderizado inline (sem overlay) */
+  .ds-modal-static {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 26px;
+    max-width: 460px;
+  }
+  .ds-modal-static h3 { font-family: var(--font-display); font-size: 18px; margin: 0 0 4px; text-align: center; }
+</style>
+
+</head>
+<body>
+
+<nav class="ds-nav">
+  <a class="ds-nav-brand" href="#sec-0">MF · Design System</a>
+  <a href="#sec-0">0 · Shell</a>
+  <a href="#sec-1">1 · Tipografia</a>
+  <a href="#sec-2">2 · Cores</a>
+  <a href="#sec-3">3 · Navegação</a>
+  <a href="#sec-4">4 · Formulários</a>
+  <a href="#sec-5">5 · Tabelas &amp; Dados</a>
+  <a href="#sec-6">6 · Componentes</a>
+  <a href="#sec-7">7 · Layout</a>
+  <a href="#sec-8">8 · Motion</a>
+  <a href="#sec-9">9 · Ícones</a>
+</nav>
+
+<!-- ============================================================
+     SEÇÃO 0 — APPLICATION SHELL (CLONE EXATO)
+     ============================================================ -->
+<header class="app-header">
+  <div class="brand">
+    <div class="mark">MF</div>
+    <div class="titles">
+      <h1>Multifoco Design System</h1>
+      <p>Biblioteca de padrões — extraída do Dashboard Comercial</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="mes-corrente-badge">
+      <span class="dot"></span>
+      Referência: <strong>Dashboard 2.0</strong>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="ds">Design System</button>
+  <button class="tab-btn" data-tab="ds-alt">Estado inativo</button>
+</nav>
+
+<main class="view active" id="view-ds">
+
+  <section id="sec-0" class="ds-section">
+    <div class="filter-bar">
+      <div class="filter-fields">
+        <div class="filter-group-cascade">
+          <div class="group-label">Período</div>
+          <div class="group-fields">
+            <div class="filter-field">
+              <label>Ano</label>
+              <div class="ms-wrap" data-ms>
+                <button type="button" class="ms-button"><span class="ms-button-text">Todos</span><span class="ms-caret">▾</span></button>
+                <div class="ms-panel">
+                  <div class="ms-panel-actions">
+                    <button type="button" class="ms-link">Selecionar todos</button>
+                    <button type="button" class="ms-link">Limpar</button>
+                  </div>
+                  <div class="ms-list">
+                    <label class="ms-option"><input type="checkbox"><span>2025</span></label>
+                    <label class="ms-option"><input type="checkbox"><span>2026</span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="filter-field">
+              <label>Trimestre</label>
+              <select><option>Todos</option></select>
+            </div>
+            <div class="filter-field">
+              <label>Mês</label>
+              <select><option>Todos</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="filter-field">
+          <label>Distribuidor</label>
+          <select><option>Todos</option></select>
+        </div>
+        <div class="filter-field">
+          <label>Laboratório</label>
+          <select><option>Todos</option></select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-ghost">Limpar filtros</button>
+        <button class="btn">Exportar visão atual</button>
+        <button class="btn btn-gold">Metas por Laboratório</button>
+      </div>
+    </div>
+
+    <div class="validation-toggle-row" data-ds-toggle="ds-validation">
+      <span class="validation-toggle-icon">▸</span> Validação dos dados
+    </div>
+    <div class="validation-panel collapsed" id="ds-validation">
+      <div class="stat-tile">
+        <div class="stat-label">Faturamento total (Distribuidores)</div>
+        <div class="stat-value">R$ 4.812.930</div>
+        <div class="stat-check ok">✓ confere com base tratada</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Linhas de venda (Distribuidores)</div>
+        <div class="stat-value">128.440</div>
+        <div class="stat-check warn">✗ divergente da base tratada</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Distribuidores</div>
+        <div class="stat-value">4</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Período coberto</div>
+        <div class="stat-value ds-period">jan/25 a jul/26</div>
+        <div class="stat-check neutral">Visão filtrada</div>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="idx">0</span> Application Shell<span class="section-toggle-icon" data-toggle-target="sec0-body">▾</span></div>
+    <div id="sec0-body" class="section-body">
+      <p class="ds-note">
+        O shell acima é o clone direto da aplicação: <span class="ds-code">header.app-header</span> (sticky, gradiente
+        <span class="ds-code">#FFFDF9 → #F5F2ED</span>) + <span class="ds-code">nav.tabs</span> +
+        <span class="ds-code">main.view.active</span> com <span class="ds-code">max-width: 1600px</span>.
+        Não existe sidebar na aplicação de referência — a navegação primária é por abas horizontais.
+        Dentro da <span class="ds-code">main.view</span> a ordem é sempre: barra de filtros → painel de validação
+        (colapsável) → blocos numerados com <span class="ds-code">.section-title</span> +
+        <span class="ds-code">.section-body</span>.
+      </p>
+      <p class="ds-note">
+        Tema: esta versão declara <span class="ds-code">data-theme="light"</span> no <span class="ds-code">&lt;html&gt;</span>
+        e utiliza superfícies claras com contraste escuro para textos e dados.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 1 — TIPOGRAFIA
+       ============================================================ -->
+  <section id="sec-1" class="ds-section">
+    <div class="section-title"><span class="idx">1</span> Tipografia<span class="section-toggle-icon" data-toggle-target="sec1-body">▾</span></div>
+    <div id="sec1-body" class="section-body">
+      <p class="ds-note">
+        Duas famílias: <span class="ds-code">--font-display</span> (Montserrat 600/700/800) para títulos, abas e
+        rótulos de gráfico; <span class="ds-code">--font-body</span> (Source Sans 3 400/500/600/700) para todo o resto.
+        Base do documento: <span class="ds-code">17px / 1.5</span>. Números usam
+        <span class="ds-code">font-variant-numeric: tabular-nums</span> — não há família monoespaçada na aplicação.
+      </p>
+
+      <div class="chart-card">
+        <div class="ds-row">
+          <div class="ds-row-name">Page Title · <span class="ds-code">.brand .titles h1</span></div>
+          <div class="brand"><div class="titles"><h1>Multifoco Representações</h1></div></div>
+          <div class="ds-row-spec">Montserrat 700 · 19px / 28.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Section Heading · <span class="ds-code">.section-title</span></div>
+          <div class="section-title ds-inline-title"><span class="idx">1</span> Faturamento e Crescimento</div>
+          <div class="ds-row-spec">Montserrat 700 · 17px / 25.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Modal Title · <span class="ds-code">.modal-box h3</span></div>
+          <div class="modal-box ds-bare"><h3>Metas Globais por Laboratório</h3></div>
+          <div class="ds-row-spec">Montserrat · 18px / 27px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Card Title · <span class="ds-code">.chart-title</span></div>
+          <div class="chart-title">Evolução mensal de faturamento</div>
+          <div class="ds-row-spec">Montserrat 700 · 15px / 22.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Tab · <span class="ds-code">nav.tabs button</span></div>
+          <nav class="tabs ds-bare"><button class="active">Distribuidores</button></nav>
+          <div class="ds-row-spec">Montserrat 600 · 15.5px · +0.3px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">KPI Value · <span class="ds-code">.kpi-value</span></div>
+          <div class="kpi-value">R$ 1.284.930</div>
+          <div class="ds-row-spec">Source Sans 3 700 · 28px · tabular</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Stat Value · <span class="ds-code">.stat-value</span></div>
+          <div class="stat-value">128.440</div>
+          <div class="ds-row-spec">Source Sans 3 700 · 26px · tabular</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Table Header · <span class="ds-code">.data-table th</span></div>
+          <table class="data-table"><thead><tr><th>Setor / Vendedor</th><th>Venda líquida</th></tr></thead></table>
+          <div class="ds-row-spec">600 · 12.5px · uppercase +0.4px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Body Text · <span class="ds-code">body</span></div>
+          <div>Texto corrido padrão da interface, usado em parágrafos e conteúdo de célula longo.</div>
+          <div class="ds-row-spec">Source Sans 3 400 · 17px / 25.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Body Small · <span class="ds-code">.churn-table td</span></div>
+          <table class="churn-table ds-bare"><tbody><tr><td>Densidade de tabela e listagens</td></tr></tbody></table>
+          <div class="ds-row-spec">400 · 14.5px / 21.75px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Label · <span class="ds-code">.filter-field label</span></div>
+          <div class="filter-field"><label>Distribuidor</label></div>
+          <div class="ds-row-spec">600 · 12.5px · uppercase +0.6px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">KPI Label · <span class="ds-code">.kpi-label</span></div>
+          <div class="kpi-label">Ticket Médio</div>
+          <div class="ds-row-spec">600 · 11px · uppercase +0.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Helper Text · <span class="ds-code">.modal-note</span></div>
+          <div class="modal-note">Comparativo referente a jun/26. Valores refletem os filtros ativos.</div>
+          <div class="ds-row-spec">400 · 13.5px / 20.25px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Caption · <span class="ds-code">.donut-sub-note</span></div>
+          <div class="donut-sub-note">412 de 980 PDVs do universo (Distribuidor/Setor filtrado)</div>
+          <div class="ds-row-spec">400 · 13px / 19.5px</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Numérico tabular · <span class="ds-code">td.num</span></div>
+          <table class="churn-table ds-bare"><tbody>
+            <tr><td class="num">1.284.930,55</td></tr>
+            <tr><td class="num">98.111,20</td></tr>
+          </tbody></table>
+          <div class="ds-row-spec">tabular-nums · alinhado à direita</div>
+        </div>
+        <div class="ds-row">
+          <div class="ds-row-name">Truncamento · <span class="ds-code">.ms-button-text</span></div>
+          <div class="ms-wrap ds-truncate-box">
+            <button type="button" class="ms-button">
+              <span class="ms-button-text">Laboratório com nome muito longo para caber</span>
+              <span class="ms-caret">▾</span>
+            </button>
+          </div>
+          <div class="ds-row-spec">ellipsis · max-width 150px</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 2 — CORES, SUPERFÍCIES E ESTADOS SEMÂNTICOS
+       ============================================================ -->
+  <section id="sec-2" class="ds-section">
+    <div class="section-title"><span class="idx">2</span> Cores, Superfícies e Estados<span class="section-toggle-icon" data-toggle-target="sec2-body">▾</span></div>
+    <div id="sec2-body" class="section-body">
+
+      <div class="ds-sub">2.1 — Cores de interface</div>
+      <div class="grid-4">
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-page"></div>
+          <div class="ds-row-name">Background da aplicação</div>
+          <div class="donut-sub-note ds-left">--page · #F5F2ED</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-surface"></div>
+          <div class="ds-row-name">Cards, painéis, barra de filtros</div>
+          <div class="donut-sub-note ds-left">--surface · #FFFFFF</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-surface2"></div>
+          <div class="ds-row-name">Campos, dropdowns, trilhos</div>
+          <div class="donut-sub-note ds-left">--surface-2 · #ECE7E0</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-header"></div>
+          <div class="ds-row-name">Header (gradiente vertical)</div>
+          <div class="donut-sub-note ds-left">#FFFDF9 → #F5F2ED</div>
+        </div>
+      </div>
+
+      <div class="grid-4 ds-mt">
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-ink1"></div>
+          <div class="ds-row-name">Texto primário</div>
+          <div class="donut-sub-note ds-left">--ink-primary · #1F1B17</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-ink2"></div>
+          <div class="ds-row-name">Texto secundário / células</div>
+          <div class="donut-sub-note ds-left">--ink-secondary · #5D554E</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-ink3"></div>
+          <div class="ds-row-name">Texto auxiliar / labels</div>
+          <div class="donut-sub-note ds-left">--ink-muted · #7A7067</div>
+        </div>
+        <div class="chart-card">
+          <div class="ds-swatch ds-bg-grid"></div>
+          <div class="ds-row-name">Linha de tabela e gridline</div>
+          <div class="donut-sub-note ds-left">--gridline · #D8D0C7</div>
+        </div>
+      </div>
+
+      <p class="ds-note ds-mt">
+        Não há zebra striping nas tabelas: as linhas são separadas apenas por
+        <span class="ds-code">border-bottom: 1px solid var(--gridline)</span>. O realce de linha é
+        exclusivamente no hover (<span class="ds-code">rgba(110,75,46,0.05)</span>).
+      </p>
+
+      <div class="ds-sub">2.2 — Cores semânticas de estado</div>
+      <p class="ds-note">
+        Cada cor semântica aparece em três aplicações na aplicação original: badge de status, mensagem de
+        feedback inline e preenchimento de barra (gauge).
+      </p>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Success · --good #0ca30c</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Badge</div>
+              <span class="churn-badge ativo">Ativo</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Variação</div>
+              <span class="kpi-badge up"><span class="badge-tag">MoM</span> ▲ 12,4%</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Feedback</div>
+              <div class="stat-check ok">✓ confere com base tratada</div>
+            </div>
+          </div>
+          <div class="gauge-row ds-mt">
+            <div class="gauge-track"><div class="gauge-fill good ds-w-92"></div></div>
+            <div class="gauge-pct">92%</div>
+          </div>
+          <div class="alert-badge ok ds-mt">✓ % Sem Canal: 4,2%</div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Warning · --warning #fab219</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Badge</div>
+              <span class="churn-badge atencao">Atenção</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Indicador</div>
+              <div class="mes-corrente-badge"><span class="dot"></span>Mês vigente: <strong>jul/26</strong></div>
+            </div>
+          </div>
+          <div class="gauge-row ds-mt">
+            <div class="gauge-track"><div class="gauge-fill warning ds-w-74"></div></div>
+            <div class="gauge-pct">74%</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Serious · --serious #ec835a</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Badge</div>
+              <span class="churn-badge risco">Risco</span>
+            </div>
+          </div>
+          <p class="ds-note ds-mt">
+            Faixa intermediária entre atenção e crítico. Na aplicação existe apenas como badge de
+            recorrência/churn — não há gauge nem feedback nessa cor.
+          </p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Error · --critical #d03b3b</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Badge</div>
+              <span class="churn-badge perdido">Perdido</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Variação</div>
+              <span class="kpi-badge down"><span class="badge-tag">YoY</span> ▼ 8,1%</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Feedback</div>
+              <div class="stat-check warn">✗ divergente da base tratada</div>
+            </div>
+          </div>
+          <div class="gauge-row ds-mt">
+            <div class="gauge-track"><div class="gauge-fill critical ds-w-38"></div></div>
+            <div class="gauge-pct">38%</div>
+          </div>
+          <div class="alert-badge ds-mt">⚠ % Sem Canal: 22,7%</div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Neutral / desabilitado · --ink-muted #898781</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Variação neutra</div>
+              <span class="kpi-badge flat"><span class="badge-tag">MoM</span> —</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Ausência de dado</div>
+              <span class="no-meta-tag">Sem meta cadastrada</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Feedback neutro</div>
+              <div class="stat-check neutral">Visão filtrada — valores refletem a seleção atual</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Séries de gráfico</span></div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch ds-sw-ol"></span>OL Multifoco · #c98500</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-movel"></span>Móvel · #3987e5</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-ativo"></span>Ativo · #008300</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-tele"></span>Televendas · #d55181</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-abs"></span>ABS · #9b6bd6</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-sem"></span>Sem Canal · #898781</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">2.3 — Superfícies e efeitos</div>
+      <div class="grid-3">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Bordas e divisores</span></div>
+          <div class="ds-border-demo">1px solid var(--border) · rgba(68,55,44,0.16)</div>
+          <div class="ds-divider-demo"></div>
+          <div class="donut-sub-note ds-left">1px solid var(--gridline) — divisores internos de tabela</div>
+          <p class="ds-note ds-mt">
+            Raios em uso: <span class="ds-code">6px</span> (botões pequenos, itens de menu),
+            <span class="ds-code">7px</span> (botões, inputs, selects), <span class="ds-code">9px</span> (painel de
+            dropdown, grupo cascata), <span class="ds-code">10px</span> (cards e tiles),
+            <span class="ds-code">12px</span> (modal), <span class="ds-code">999px</span> (pílulas e gauges).
+          </p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Sombras e overlay</span></div>
+          <div class="ds-shadow-modal">Modal · 0 24px 60px rgba(0,0,0,.55)</div>
+          <div class="ds-shadow-panel">Dropdown · 0 12px 28px rgba(0,0,0,.45)</div>
+          <div class="ds-shadow-tooltip">Tooltip · 0 8px 22px rgba(0,0,0,.5)</div>
+          <div class="ds-overlay-demo"><span>Overlay do modal · rgba(0,0,0,0.6)</span></div>
+          <p class="ds-note ds-mt">
+            Não existe efeito glass/blur na aplicação: o overlay é opaco, sem
+            <span class="ds-code">backdrop-filter</span>.
+          </p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Gradientes</span></div>
+          <div class="ds-swatch ds-bg-gold"></div>
+          <div class="ds-row-name ds-mt-s">Marca e ação primária</div>
+          <div class="donut-sub-note ds-left">
+            <span class="ds-code">linear-gradient(135deg, --gold #6E4B2E → --gold-light #9c7550)</span> —
+            usado em <span class="ds-code">.brand .mark</span> e <span class="ds-code">.btn-gold</span>.
+          </div>
+          <div class="ds-swatch ds-bg-header ds-mt"></div>
+          <div class="ds-row-name ds-mt-s">Header</div>
+          <div class="donut-sub-note ds-left"><span class="ds-code">linear-gradient(180deg, #FFFDF9 0%, #F5F2ED 100%)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 3 — NAVEGAÇÃO E ESTRUTURA
+       ============================================================ -->
+  <section id="sec-3" class="ds-section">
+    <div class="section-title"><span class="idx">3</span> Navegação e Estrutura<span class="section-toggle-icon" data-toggle-target="sec3-body">▾</span></div>
+    <div id="sec3-body" class="section-body">
+      <p class="ds-note">
+        A aplicação não possui sidebar, breadcrumbs nem paginação — esses padrões foram omitidos por não
+        existirem na referência. Listagens longas são limitadas por corte (300 linhas) com nota de contagem,
+        e não por paginação.
+      </p>
+
+      <div class="ds-sub">3.1 — Abas (navegação primária)</div>
+      <div class="chart-card">
+        <nav class="tabs ds-bare">
+          <button class="active">Ativa (página atual)</button>
+          <button>Default</button>
+          <button class="ds-force-hover">Hover</button>
+        </nav>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">nav.tabs button</span> — default <span class="ds-code">--ink-muted</span>,
+          hover <span class="ds-code">--ink-secondary</span>, ativa <span class="ds-code">--ink-primary</span> com
+          <span class="ds-code">border-bottom: 2.5px solid var(--gold-light)</span>. Transição de
+          <span class="ds-code">.15s ease</span> em cor e borda. Não há estado disabled definido.
+        </p>
+      </div>
+
+      <div class="ds-sub">3.2 — Header / Topbar</div>
+      <div class="chart-card">
+        <div class="brand">
+          <div class="mark">MF</div>
+          <div class="titles">
+            <h1>Multifoco Representações</h1>
+            <p>Dashboard Comercial — indicadores de vendas e cobertura</p>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="ds-code">.brand .mark</span> — bloco 38×38, raio 8px, gradiente dourado, Montserrat 800</span>
+        </div>
+        <div class="ds-states ds-mt">
+          <div class="ds-state">
+            <div class="ds-row-name">Indicador de contexto</div>
+            <div class="mes-corrente-badge"><span class="dot"></span>Mês vigente: <strong>jul/26</strong></div>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          O header é <span class="ds-code">sticky</span> (<span class="ds-code">top: 0; z-index: 50</span>) e contém
+          apenas marca + indicador de mês vigente. Não há busca global, notificações nem avatar de usuário.
+        </p>
+      </div>
+
+      <div class="ds-sub">3.3 — Seções colapsáveis (estrutura de página)</div>
+      <div class="chart-card">
+        <div class="section-title ds-inline-title"><span class="idx">4</span> Equipe<span class="section-toggle-icon" data-toggle-target="ds-demo-collapse">▾</span></div>
+        <div id="ds-demo-collapse" class="section-body">
+          <div class="placeholder-block">
+            Conteúdo do bloco — clique no ícone à direita do título para colapsar.
+            <div class="sprint-tag">.section-body.collapsed</div>
+          </div>
+        </div>
+        <div class="validation-toggle-row" data-ds-toggle="ds-demo-collapse2">
+          <span class="validation-toggle-icon">▸</span> Toggle secundário (linha)
+        </div>
+        <div class="validation-panel collapsed" id="ds-demo-collapse2">
+          <div class="stat-tile"><div class="stat-label">Painel revelado</div><div class="stat-value">4</div></div>
+        </div>
+        <p class="ds-note ds-mt">
+          Dois padrões de expansão: <span class="ds-code">.section-toggle-icon</span> (ícone ▾ à direita do título,
+          rotaciona −90° quando colapsado) e <span class="ds-code">.validation-toggle-row</span> (linha clicável com
+          ícone ▸ que rotaciona +90° quando expandida).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 4 — COMPONENTES DE FORMULÁRIO
+       ============================================================ -->
+  <section id="sec-4" class="ds-section">
+    <div class="section-title"><span class="idx">4</span> Componentes de Formulário<span class="section-toggle-icon" data-toggle-target="sec4-body">▾</span></div>
+    <div id="sec4-body" class="section-body">
+      <p class="ds-note">
+        Presentes na referência: input de texto (busca), select nativo estilizado, multi-select customizado,
+        checkbox e input de arquivo. <strong>Não existem</strong> na aplicação: radio, toggle/switch, textarea,
+        date picker, estados <span class="ds-code">error</span> ou <span class="ds-code">read-only</span>, nem
+        variações de tamanho de campo — por isso não são documentados.
+      </p>
+
+      <div class="ds-sub">4.1 — Input de texto</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Default (com placeholder)</div>
+            <input type="text" class="churn-search" placeholder="Buscar cliente ou cidade...">
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Preenchido</div>
+            <input type="text" class="churn-search" value="Farmácia Central">
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Focus</div>
+            <input type="text" class="churn-search ds-force-focus" value="outline 1.5px --gold-light">
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Disabled (atributo nativo)</div>
+            <input type="text" class="churn-search" value="Sem estilo próprio" disabled>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">.churn-search</span> — 100% de largura, fundo <span class="ds-code">--surface-2</span>,
+          borda <span class="ds-code">--border</span>, raio 7px, 14.5px. O foco troca a borda por
+          <span class="ds-code">outline: 1.5px solid var(--gold-light)</span>. O estado disabled não é estilizado no
+          CSS original — cai no comportamento nativo do navegador.
+        </p>
+      </div>
+
+      <div class="ds-sub">4.2 — Select nativo</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Default</div>
+            <div class="filter-field">
+              <label>Trimestre</label>
+              <select><option>Todos</option><option>1º trimestre</option></select>
+            </div>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Com valor selecionado</div>
+            <div class="filter-field">
+              <label>Distribuidor</label>
+              <select><option selected>DISMEPE</option><option>ABS</option></select>
+            </div>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Focus</div>
+            <div class="filter-field">
+              <label>Mês</label>
+              <select class="ds-force-focus"><option>jun/26</option></select>
+            </div>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">appearance: none</span> + caret em SVG inline
+          (<span class="ds-code">data:image/svg+xml</span>, fill <span class="ds-code">#898781</span>) posicionado a
+          10px da direita. Padding <span class="ds-code">8px 30px 8px 10px</span> para reservar o espaço da seta.
+        </p>
+      </div>
+
+      <div class="ds-sub">4.3 — Multi-select (componente customizado)</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Fechado · placeholder</div>
+            <div class="filter-field">
+              <label>Laboratório</label>
+              <div class="ms-wrap" data-ms>
+                <button type="button" class="ms-button"><span class="ms-button-text">Todos</span><span class="ms-caret">▾</span></button>
+                <div class="ms-panel">
+                  <div class="ms-panel-actions">
+                    <button type="button" class="ms-link">Selecionar todos</button>
+                    <button type="button" class="ms-link">Limpar</button>
+                  </div>
+                  <div class="ms-list">
+                    <label class="ms-option"><input type="checkbox"><span>KATIGUA</span></label>
+                    <label class="ms-option"><input type="checkbox"><span>NUTRIEX</span></label>
+                    <label class="ms-option"><input type="checkbox"><span>MCG</span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-state">
+            <div class="ds-row-name">Com seleção (botão limpar)</div>
+            <div class="filter-field">
+              <label>Laboratório</label>
+              <div class="ms-wrap" data-ms>
+                <button type="button" class="ms-button">
+                  <span class="ms-button-text">3 selecionados</span>
+                  <span class="ms-clear" title="Limpar este filtro">×</span>
+                  <span class="ms-caret">▾</span>
+                </button>
+                <div class="ms-panel">
+                  <div class="ms-panel-actions">
+                    <button type="button" class="ms-link">Selecionar todos</button>
+                    <button type="button" class="ms-link">Limpar</button>
+                  </div>
+                  <div class="ms-list">
+                    <label class="ms-option"><input type="checkbox" checked><span>KATIGUA</span></label>
+                    <label class="ms-option"><input type="checkbox" checked><span>NUTRIEX</span></label>
+                    <label class="ms-option"><input type="checkbox" checked><span>MCG</span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-state ds-state-wide">
+            <div class="ds-row-name">Aberto · com busca</div>
+            <div class="filter-field">
+              <label>Representante</label>
+              <div class="ms-wrap open" data-ms-static>
+                <button type="button" class="ms-button"><span class="ms-button-text">2 selecionados</span><span class="ms-clear">×</span><span class="ms-caret">▾</span></button>
+                <div class="ms-panel">
+                  <input type="text" class="ms-search" placeholder="Buscar...">
+                  <div class="ms-panel-actions">
+                    <button type="button" class="ms-link">Selecionar todos</button>
+                    <button type="button" class="ms-link">Limpar</button>
+                  </div>
+                  <div class="ms-list">
+                    <label class="ms-option"><input type="checkbox" checked><span>César</span></label>
+                    <label class="ms-option"><input type="checkbox" checked><span>Débora</span></label>
+                    <label class="ms-option"><input type="checkbox"><span>Elizangela</span></label>
+                    <label class="ms-option"><input type="checkbox"><span>Humberto</span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ds-state ds-state-wide">
+            <div class="ds-row-name">Aberto · lista vazia</div>
+            <div class="filter-field">
+              <label>Categoria</label>
+              <div class="ms-wrap open" data-ms-static>
+                <button type="button" class="ms-button"><span class="ms-button-text">Todos</span><span class="ms-caret">▾</span></button>
+                <div class="ms-panel">
+                  <div class="ms-panel-actions">
+                    <button type="button" class="ms-link">Selecionar todos</button>
+                    <button type="button" class="ms-link">Limpar</button>
+                  </div>
+                  <div class="ms-list">
+                    <div class="ms-empty">Nenhuma opção disponível para os filtros atuais</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          Rótulo do botão: <span class="ds-code">placeholder</span> quando vazio · nome da opção quando há 1
+          selecionada · <span class="ds-code">"N selecionados"</span> a partir de 2. O painel abre a
+          <span class="ds-code">calc(100% + 6px)</span>, largura 230–320px, lista com
+          <span class="ds-code">max-height: 240px</span> e rolagem.
+        </p>
+      </div>
+
+      <div class="ds-sub">4.4 — Checkbox</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Com rótulo (multi-select)</div>
+            <label class="ms-option"><input type="checkbox"><span>Não marcado</span></label>
+            <label class="ms-option"><input type="checkbox" checked><span>Marcado</span></label>
+            <label class="ms-option"><input type="checkbox" disabled><span>Desabilitado</span></label>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Sem rótulo (tabela de produtos)</div>
+            <div>
+              <input type="checkbox" class="produto-select-cb">
+              <input type="checkbox" class="produto-select-cb" checked>
+              <input type="checkbox" class="produto-select-all" title="Selecionar todos">
+            </div>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">accent-color: var(--gold-light)</span> em ambos. Na tabela, 15×15px com
+          <span class="ds-code">vertical-align: middle</span>. Não há estado indeterminate na aplicação.
+        </p>
+      </div>
+
+      <div class="ds-sub">4.5 — Campos de modal e upload</div>
+      <div class="chart-card">
+        <div class="modal-field">
+          <label>Distribuidor</label>
+          <select><option>ABS</option><option>DISMEPE</option></select>
+        </div>
+        <div class="modal-field">
+          <label>Meta (R$)</label>
+          <input type="number" value="15000">
+        </div>
+        <div class="modal-field">
+          <label>Arquivo preenchido (.xlsx)</label>
+          <input type="file">
+        </div>
+        <div class="modal-lab-row">
+          <label>KATIGUA</label>
+          <input type="text" value="12.500,00">
+        </div>
+        <div class="modal-lab-row">
+          <label>NUTRIEX</label>
+          <input type="text" value="8.300,00">
+        </div>
+        <p class="ds-note ds-mt">
+          Campos de modal são centralizados (<span class="ds-code">text-align: center</span>) e ocupam 100% da
+          largura. <span class="ds-code">.modal-lab-row</span> é a exceção: rótulo à direita e valor numérico
+          alinhado à direita com <span class="ds-code">tabular-nums</span>, largura fixa de 130px.
+        </p>
+      </div>
+
+      <div class="ds-sub">4.6 — Composição: barra de filtros completa</div>
+      <div class="filter-bar">
+        <div class="filter-fields">
+          <div class="filter-group-cascade">
+            <div class="group-label">Período</div>
+            <div class="group-fields">
+              <div class="filter-field"><label>Ano</label><select><option>Todos</option></select></div>
+              <div class="filter-field"><label>Trimestre</label><select><option>Todos</option></select></div>
+              <div class="filter-field"><label>Mês</label><select><option>Todos</option></select></div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>Distribuidor</label>
+            <div class="ms-wrap" data-ms>
+              <button type="button" class="ms-button"><span class="ms-button-text">Todos</span><span class="ms-caret">▾</span></button>
+              <div class="ms-panel">
+                <div class="ms-panel-actions">
+                  <button type="button" class="ms-link">Selecionar todos</button>
+                  <button type="button" class="ms-link">Limpar</button>
+                </div>
+                <div class="ms-list">
+                  <label class="ms-option"><input type="checkbox"><span>ABS</span></label>
+                  <label class="ms-option"><input type="checkbox"><span>G1</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>Laboratório</label>
+            <select><option>Todos</option></select>
+          </div>
+          <div class="filter-field">
+            <label>Canal</label>
+            <select><option>Todos</option></select>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-ghost">Limpar filtros</button>
+          <button class="btn">Exportar visão atual</button>
+          <button class="btn btn-gold">Metas por Laboratório</button>
+        </div>
+      </div>
+      <p class="ds-note">
+        Padrão: <span class="ds-code">.filter-bar</span> em flex com <span class="ds-code">align-items: flex-end</span>,
+        gap 14px, campos com <span class="ds-code">min-width: 150px</span> (120px dentro do grupo cascata) e ações
+        empurradas para a direita por <span class="ds-code">margin-left: auto</span>. Rótulos ficam acima do campo e
+        são centralizados.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 5 — TABELAS E EXIBIÇÃO DE DADOS
+       ============================================================ -->
+  <section id="sec-5" class="ds-section">
+    <div class="section-title"><span class="idx">5</span> Tabelas e Exibição de Dados<span class="section-toggle-icon" data-toggle-target="sec5-body">▾</span></div>
+    <div id="sec5-body" class="section-body">
+
+      <div class="ds-sub">5.1 — Tabela de dados</div>
+      <div class="chart-card">
+        <div class="chart-title-row"><span class="chart-title">Tabela base · .data-table</span></div>
+        <table class="data-table">
+          <thead><tr><th>Distribuidor</th><th>Laboratório</th><th>Venda líquida</th><th>PDVs</th></tr></thead>
+          <tbody>
+            <tr><td>ABS</td><td>KATIGUA</td><td>128.440,10</td><td>212</td></tr>
+            <tr><td>DISMEPE</td><td>NUTRIEX</td><td>98.111,20</td><td>187</td></tr>
+            <tr><td>G1</td><td>MCG</td><td>74.902,55</td><td>143</td></tr>
+          </tbody>
+        </table>
+        <p class="ds-note ds-mt">
+          Sem zebra striping. Hover na linha: fundo <span class="ds-code">rgba(110,75,46,0.05)</span> e texto
+          promovido de <span class="ds-code">--ink-secondary</span> para <span class="ds-code">--ink-primary</span>.
+          Células numéricas usam <span class="ds-code">tabular-nums</span>.
+        </p>
+      </div>
+
+      <div class="chart-card ds-mt">
+        <div class="chart-title-row">
+          <span class="chart-title">Tabela ordenável com status · .churn-table</span>
+          <button class="btn btn-export-churn">Exportar Excel</button>
+        </div>
+        <input type="text" class="churn-search" placeholder="Buscar cliente ou cidade...">
+        <div class="churn-table-wrap">
+          <table class="churn-table">
+            <thead><tr>
+              <th>Cliente</th>
+              <th>CNPJ</th>
+              <th>Cidade</th>
+              <th>Setor</th>
+              <th class="num">Dias sem comprar <span class="sort-arrow">▼</span></th>
+              <th>Situação</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>Farmácia Central</td><td>12.862.648/0001-56</td><td>Recife</td><td>César</td><td class="num">4</td><td><span class="churn-badge ativo">Ativo</span></td></tr>
+              <tr><td>Drogaria Bem Estar</td><td>10.287.950/0001-00</td><td>Olinda</td><td>Débora</td><td class="num">38</td><td><span class="churn-badge atencao">Atenção</span></td></tr>
+              <tr><td>Farmácia Popular Norte</td><td>11.037.251/0001-67</td><td>Caruaru</td><td>Jonas</td><td class="num">67</td><td><span class="churn-badge risco">Risco</span></td></tr>
+              <tr><td>Drogaria São Lucas</td><td>13.145.752/0001-92</td><td>Petrolina</td><td>Valnei</td><td class="num">124</td><td><span class="churn-badge perdido">Perdido</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="churn-count-note">4 clientes — Ativo 1 · Atenção 1 · Risco 1 · Perdido 1</div>
+        <p class="ds-note ds-mt">
+          Cabeçalho <span class="ds-code">sticky top: 0</span> com fundo <span class="ds-code">--surface</span>,
+          <span class="ds-code">cursor: pointer</span> e <span class="ds-code">user-select: none</span>; a coluna
+          ordenada recebe <span class="ds-code">.sort-arrow</span> (▲/▼, opacidade .6). O contêiner
+          <span class="ds-code">.churn-table-wrap</span> limita a altura em 360px com rolagem.
+        </p>
+      </div>
+
+      <div class="chart-card ds-mt">
+        <div class="chart-title-row"><span class="chart-title">Estado vazio · .meta-empty-note</span></div>
+        <div class="churn-table-wrap">
+          <table class="churn-table">
+            <thead><tr><th>Cliente</th><th>Cidade</th><th class="num">Dias</th></tr></thead>
+            <tbody>
+              <tr><td colspan="3" class="meta-empty-note">Nenhum cliente encontrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="placeholder-block ds-mt">
+          Bloco ainda não implementado
+          <div class="sprint-tag">Sprint 6</div>
+        </div>
+      </div>
+
+      <div class="chart-card ds-mt">
+        <div class="chart-title-row"><span class="chart-title">Tabela com seleção e ações · .produto-table</span></div>
+        <div class="produto-selection-bar">
+          <span><strong>3</strong> produtos selecionados</span>
+          <span>Faturamento: <strong>R$ 301.453,85</strong></span>
+          <button class="btn-link-clear">Limpar seleção</button>
+        </div>
+        <div class="churn-table-wrap">
+          <table class="ranking-table produto-table">
+            <thead><tr>
+              <th class="select-col"><input type="checkbox" class="produto-select-all"></th>
+              <th>Laboratório</th>
+              <th>Produto</th>
+              <th class="num">Preço Médio</th>
+              <th class="num">Faturamento R$</th>
+              <th class="num">Share % Geral</th>
+              <th class="num">Vendedores sem este produto</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="select-col"><input type="checkbox" class="produto-select-cb" checked></td>
+                <td>KATIGUA</td>
+                <td>MAGNESIO DIMALATO 210MG C/60 CAPS</td>
+                <td class="num">18,40</td>
+                <td class="num">128.440,10</td>
+                <td class="num">12,4%</td>
+                <td class="num"><span class="troca-badge" title="Lista de vendedores">4 ⓘ</span></td>
+              </tr>
+              <tr>
+                <td class="select-col"><input type="checkbox" class="produto-select-cb" checked></td>
+                <td>NUTRIEX</td>
+                <td>CREATINA PURE MONOHIDRATADA 120G</td>
+                <td class="num">42,90</td>
+                <td class="num">98.111,20</td>
+                <td class="num">9,1%</td>
+                <td class="num">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="churn-count-note">2 produtos exibidos</div>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">.ranking-table</span> centraliza cabeçalhos e dados; a variante
+          <span class="ds-code">.produto-table</span> força a descrição do produto (3ª coluna) à esquerda e reserva
+          34px para a coluna de seleção. A barra de seleção aparece apenas quando há itens marcados.
+        </p>
+      </div>
+
+      <div class="chart-card ds-mt">
+        <div class="chart-title-row"><span class="chart-title">Tabela com gauge embutido · .meta-vendor-table</span></div>
+        <div class="coverage-total">
+          <div class="coverage-total-row"><span>Cobertura Total</span><span>R$ 184.220 / R$ 220.000</span></div>
+          <div class="gauge-row">
+            <div class="gauge-track"><div class="gauge-fill good ds-w-84"></div></div>
+            <div class="gauge-pct">84%</div>
+          </div>
+        </div>
+        <div class="meta-scroll">
+          <table class="meta-vendor-table">
+            <thead><tr><th>Setor/Vendedor</th><th>Realizado</th><th>Meta</th><th>Atingimento</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>César</td><td class="num">R$ 92.400</td><td class="num">R$ 100.000</td>
+                <td><div class="gauge-row"><div class="gauge-track"><div class="gauge-fill good ds-w-92"></div></div><div class="gauge-pct">92%</div></div></td>
+              </tr>
+              <tr>
+                <td>Débora</td><td class="num">R$ 55.820</td><td class="num">R$ 75.000</td>
+                <td><div class="gauge-row"><div class="gauge-track"><div class="gauge-fill warning ds-w-74"></div></div><div class="gauge-pct">74%</div></div></td>
+              </tr>
+              <tr>
+                <td>Jonas</td><td class="num">R$ 36.000</td><td class="num">—</td>
+                <td><span class="no-meta-tag">Sem meta cadastrada</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="ds-sub">5.2 — Cards</div>
+      <div class="grid-4">
+        <div class="kpi-card">
+          <div class="kpi-label">Faturamento (Distribuidores)</div>
+          <div class="kpi-value">R$ 1.284.930</div>
+          <div class="kpi-badges">
+            <span class="kpi-badge up"><span class="badge-tag">MoM</span> ▲ 12,4%</span>
+            <span class="kpi-badge down"><span class="badge-tag">YoY</span> ▼ 8,1%</span>
+          </div>
+          <div class="modal-note ds-mt-s">Comparativo referente a jun/26</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Ticket Médio</div>
+          <div class="kpi-value">R$ 1.318</div>
+          <div class="modal-note ds-mt-s">975 PDVs no período filtrado</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Atendimento</div>
+          <div class="kpi-value">86,3%</div>
+          <div class="gauge-row ds-full">
+            <div class="gauge-track"><div class="gauge-fill warning ds-w-86"></div></div>
+          </div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-label">Distribuidores</div>
+          <div class="stat-value">4</div>
+          <div class="stat-check ok">✓ confere com base tratada</div>
+        </div>
+      </div>
+      <p class="ds-note ds-mt">
+        <span class="ds-code">.kpi-card</span> e <span class="ds-code">.stat-tile</span> compartilham fundo
+        <span class="ds-code">--surface</span>, borda 1px, raio 10px e conteúdo centralizado. Diferem no padding
+        (18/20 vs 16/18) e no tamanho do valor (28px vs 26px).
+      </p>
+
+      <div class="ds-sub">5.3 — Container de gráfico</div>
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Evolução mensal de faturamento</span></div>
+          <div class="ds-chart-slot">
+            <span class="meta-empty-note">Área do gráfico — SVG renderizado por JS</span>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch ds-sw-ol"></span>OL Multifoco</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-silver"></span>Demais Canais</span>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title-row">
+            <span class="chart-title">Share de Canal</span>
+            <span class="alert-badge ok">✓ % Sem Canal: 4,2%</span>
+          </div>
+          <div class="donut-wrap">
+            <div class="ds-donut-slot">
+              <div class="donut-center-value">R$ 1,2M</div>
+              <div class="donut-center-label">Faturamento</div>
+            </div>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-swatch ds-sw-ol"></span>OL Multifoco — 34,2%</span>
+              <span class="legend-item"><span class="legend-swatch ds-sw-movel"></span>Móvel — 41,0%</span>
+              <span class="legend-item"><span class="legend-swatch ds-sw-sem"></span>Sem Canal — 4,2%</span>
+            </div>
+            <div class="donut-sub-note">412 de 980 PDVs do universo (Distribuidor/Setor filtrado)</div>
+          </div>
+        </div>
+      </div>
+      <p class="ds-note ds-mt">
+        <strong>Não há biblioteca de gráficos.</strong> Todos os gráficos (barras empilhadas, donut e fluxo) são SVG
+        construídos à mão via <span class="ds-code">document.createElementNS</span>, usando
+        <span class="ds-code">var(--gridline)</span> nas linhas de grade e <span class="ds-code">var(--ink-muted)</span>
+        nos rótulos de eixo. A única dependência externa é a <span class="ds-code">SheetJS (xlsx 0.18.5)</span>, usada
+        apenas para exportação. O que o design system define é o invólucro: <span class="ds-code">.chart-card</span>,
+        <span class="ds-code">.chart-title-row</span>, <span class="ds-code">.chart-legend</span> e
+        <span class="ds-code">.chart-tooltip</span>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 6 — COMPONENTES DE UI
+       ============================================================ -->
+  <section id="sec-6" class="ds-section">
+    <div class="section-title"><span class="idx">6</span> Componentes de UI<span class="section-toggle-icon" data-toggle-target="sec6-body">▾</span></div>
+    <div id="sec6-body" class="section-body">
+
+      <div class="ds-sub">6.1 — Botões</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Secondary (padrão)</div>
+            <button class="btn">Exportar visão atual</button>
+            <button class="btn ds-force-hover">Hover</button>
+            <button class="btn" disabled>Disabled (nativo)</button>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Primary · .btn-gold</div>
+            <button class="btn btn-gold">Metas por Laboratório</button>
+            <button class="btn btn-gold ds-force-hover">Hover (brightness 1.08)</button>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Ghost · .btn-ghost</div>
+            <button class="btn btn-ghost">Limpar filtros</button>
+            <button class="btn btn-ghost ds-force-hover">Hover</button>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Com ícone (glifo)</div>
+            <button class="btn btn-ghost">🔒 Carregar metas salvas</button>
+          </div>
+        </div>
+
+        <div class="ds-sub">Tamanhos</div>
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Padrão</div>
+            <button class="btn">8px 14px · 14.5px · raio 7px</button>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Compacto (barra de filtros)</div>
+            <div class="filter-actions"><button class="btn">5px 11px · 11.5px · raio 6px</button></div>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Compacto (ação de card)</div>
+            <button class="btn btn-export-churn">4px 10px · 11px · raio 6px</button>
+          </div>
+          <div class="ds-state">
+            <div class="ds-row-name">Link · .btn-link-clear / .ms-link</div>
+            <button class="btn-link-clear">Limpar seleção</button>
+            <button class="ms-link">Selecionar todos</button>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          Dentro de <span class="ds-code">.filter-actions</span>, o <span class="ds-code">.btn-gold</span> perde o
+          gradiente e usa <span class="ds-code">--gold</span> sólido, com hover em <span class="ds-code">--gold-light</span>
+          e <span class="ds-code">filter: none</span>. Não há estados <span class="ds-code">:active</span>,
+          <span class="ds-code">:focus</span> ou <span class="ds-code">loading</span> definidos no CSS original.
+        </p>
+      </div>
+
+      <div class="ds-sub">6.2 — Badges, tags e pílulas de status</div>
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Status de recorrência · .churn-badge</span></div>
+          <div class="ds-states">
+            <div class="ds-state"><span class="churn-badge ativo">Ativo</span></div>
+            <div class="ds-state"><span class="churn-badge atencao">Atenção</span></div>
+            <div class="ds-state"><span class="churn-badge risco">Risco</span></div>
+            <div class="ds-state"><span class="churn-badge perdido">Perdido</span></div>
+          </div>
+          <div class="donut-sub-note ds-left ds-mt">Fundo em alpha 0.15–0.18 da cor semântica, texto na cor cheia, raio 999px, 13px/700.</div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Variação de KPI · .kpi-badge</span></div>
+          <div class="kpi-badges">
+            <span class="kpi-badge up"><span class="badge-tag">MoM</span> ▲ 12,4%</span>
+            <span class="kpi-badge down"><span class="badge-tag">YoY</span> ▼ 8,1%</span>
+            <span class="kpi-badge flat"><span class="badge-tag">MoM</span> ▬ 0,0%</span>
+            <span class="kpi-badge flat"><span class="badge-tag">YoY</span> —</span>
+          </div>
+          <div class="donut-sub-note ds-left ds-mt">O prefixo <span class="ds-code">.badge-tag</span> fica em opacidade 0.75 e peso 600.</div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Alerta de card · .alert-badge</span></div>
+          <div class="ds-states">
+            <div class="ds-state"><span class="alert-badge ok">✓ % Sem Canal: 4,2%</span></div>
+            <div class="ds-state"><span class="alert-badge">⚠ % Sem Canal: 22,7%</span></div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Demais marcadores</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Contexto</div>
+              <div class="mes-corrente-badge"><span class="dot"></span>Mês vigente: <strong>jul/26</strong></div>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Ausência de dado</div>
+              <span class="no-meta-tag">Sem meta cadastrada</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Etapa / roadmap</div>
+              <span class="sprint-tag">Sprint 6</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Informativo (com title)</div>
+              <span class="troca-badge" title="Anterior: Jonas → Atual: César · troca em mai/26">🔄</span>
+              <span class="troca-badge" title="Lista de vendedores sem este produto">4 ⓘ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">6.3 — Modal</div>
+      <div class="chart-card">
+        <div class="ds-states">
+          <div class="ds-state">
+            <button class="btn btn-gold" data-ds-open-modal="ds-modal">Abrir modal padrão</button>
+          </div>
+          <div class="ds-state">
+            <button class="btn" data-ds-open-modal="ds-modal-2">Abrir modal em 2 passos</button>
+          </div>
+        </div>
+        <p class="ds-note ds-mt">
+          <span class="ds-code">.modal-overlay</span> — <span class="ds-code">position: fixed; inset: 0</span>,
+          fundo <span class="ds-code">rgba(0,0,0,0.6)</span>, <span class="ds-code">z-index: 500</span>; a classe
+          <span class="ds-code">.open</span> troca <span class="ds-code">display: none</span> por
+          <span class="ds-code">flex</span> (sem animação de entrada). A caixa tem 460px, raio 12px, rolagem interna
+          e botão × posicionado em 14/16px. Não existe variante destrutiva de confirmação na aplicação.
+        </p>
+      </div>
+
+      <div class="ds-sub">6.4 — Feedback inline</div>
+      <div class="chart-card">
+        <p class="ds-note">
+          Não há sistema de toast ou notificação flutuante na aplicação. O feedback é sempre inline, em três formas:
+        </p>
+        <div class="ds-states">
+          <div class="ds-state">
+            <div class="ds-row-name">Validação em tile</div>
+            <div class="stat-check ok">✓ confere com base tratada</div>
+            <div class="stat-check warn">✗ divergente da base tratada</div>
+            <div class="stat-check neutral">Visão filtrada — valores refletem a seleção atual</div>
+          </div>
+          <div class="ds-state ds-state-wide">
+            <div class="ds-row-name">Nota de modal / status de importação</div>
+            <p class="modal-note">Ao salvar, o dashboard grava automaticamente um arquivo <strong>Metas_&lt;mês&gt;.csv</strong> na pasta escolhida.</p>
+          </div>
+          <div class="ds-state ds-state-wide">
+            <div class="ds-row-name">Estado vazio</div>
+            <div class="meta-empty-note">Sem vendas no mês de referência (jun/26) para os filtros atuais.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">6.5 — Tooltip</div>
+      <div class="chart-card">
+        <p class="ds-note">
+          <span class="ds-code">.chart-tooltip</span> — <span class="ds-code">position: fixed</span>,
+          <span class="ds-code">pointer-events: none</span>, posicionado pelo cursor via JS
+          (<span class="ds-code">showTooltip(clientX, clientY, html)</span>), sem seta e sem variantes de posição.
+          Aparece ao passar o mouse sobre barras, segmentos de donut e áreas de fluxo.
+        </p>
+        <div class="ds-tooltip-demo">
+          <div class="tt-title">jun/26</div>
+          Demais Canais: <strong>R$ 812.400</strong><br>
+          OL Multifoco: <strong>R$ 472.530</strong><br>
+          Total: <strong>R$ 1.284.930</strong><br>
+          % OL Multifoco: <strong>36,8%</strong>
+        </div>
+        <p class="ds-note ds-mt">
+          Marcadores com <span class="ds-code">title</span> nativo (<span class="ds-code">.troca-badge</span>,
+          <span class="ds-code">.ms-clear</span>, cabeçalhos de coluna) usam o tooltip do navegador, não este componente.
+        </p>
+      </div>
+
+      <div class="ds-sub">6.6 — Menu dropdown</div>
+      <div class="chart-card">
+        <p class="ds-note">
+          O único menu suspenso da aplicação é o painel do multi-select
+          (<span class="ds-code">.ms-panel</span>), documentado na seção 4.3: item default, item hover
+          (<span class="ds-code">rgba(110,75,46,0.06)</span> + texto primário), separador
+          (<span class="ds-code">.ms-panel-actions</span> com borda inferior) e estado vazio
+          (<span class="ds-code">.ms-empty</span>). Não há menu de contexto nem itens desabilitados.
+        </p>
+      </div>
+
+      <div class="ds-sub">6.7 — Componentes ausentes na referência</div>
+      <div class="chart-card">
+        <p class="ds-note">
+          Omitidos por não existirem no CSS/JS original: avatar ou user badge, spinner, barra de progresso
+          indeterminada, skeleton de carregamento, toast, popover e paginação. Carregamentos são síncronos (os dados
+          vêm embutidos no próprio HTML), então não há estado de loading a documentar.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 7 — LAYOUT E ESPAÇAMENTO
+       ============================================================ -->
+  <section id="sec-7" class="ds-section">
+    <div class="section-title"><span class="idx">7</span> Layout e Espaçamento<span class="section-toggle-icon" data-toggle-target="sec7-body">▾</span></div>
+    <div id="sec7-body" class="section-body">
+      <p class="ds-note">
+        Não há sidebar: a área útil é uma coluna única com <span class="ds-code">max-width: 1600px</span>,
+        <span class="ds-code">margin: 0 auto</span> e padding <span class="ds-code">22px 28px 60px</span>.
+        Header, abas e rodapé usam o mesmo recuo horizontal de 28px, o que alinha tudo verticalmente.
+      </p>
+
+      <div class="ds-sub">Grades disponíveis</div>
+      <table class="data-table">
+        <thead><tr><th>Classe</th><th>Colunas</th><th>Gap</th><th>Breakpoint</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ds-code">.bloco1-grid</span></td><td>minmax(220px, 0.9fr) / 1.6fr</td><td>16px</td><td>1 coluna &lt; 1100px</td></tr>
+          <tr><td><span class="ds-code">.grid-3</span></td><td>0.9fr / 1.5fr</td><td>16px</td><td>1 coluna &lt; 1100px</td></tr>
+          <tr><td><span class="ds-code">.grid-2</span></td><td>1fr / 1fr</td><td>16px</td><td>1 coluna &lt; 980px</td></tr>
+          <tr><td><span class="ds-code">.grid-4</span></td><td>repeat(4, 1fr)</td><td>16px</td><td>1 coluna &lt; 980px</td></tr>
+          <tr><td><span class="ds-code">.validation-panel</span></td><td>auto-fit, minmax(200px, 1fr)</td><td>14px</td><td>fluido</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ds-sub">Ritmo vertical</div>
+      <table class="data-table">
+        <thead><tr><th>Elemento</th><th>Espaçamento</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ds-code">.section-title</span></td><td>margin 32px 0 14px</td></tr>
+          <tr><td><span class="ds-code">.filter-bar</span></td><td>padding 14px 16px · margin-bottom 22px</td></tr>
+          <tr><td><span class="ds-code">.validation-panel</span></td><td>margin-bottom 26px</td></tr>
+          <tr><td><span class="ds-code">.chart-card</span> / <span class="ds-code">.kpi-card</span></td><td>padding 18px 20px</td></tr>
+          <tr><td><span class="ds-code">.stat-tile</span></td><td>padding 16px 18px</td></tr>
+          <tr><td><span class="ds-code">.modal-box</span></td><td>padding 24px 26px</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ds-sub">Padrão 1 — Dashboard (KPIs + gráfico)</div>
+      <div class="bloco1-grid">
+        <div class="kpi-col">
+          <div class="kpi-card">
+            <div class="kpi-label">Faturamento (Distribuidores)</div>
+            <div class="kpi-value">R$ 1.284.930</div>
+            <div class="kpi-badges">
+              <span class="kpi-badge up"><span class="badge-tag">MoM</span> ▲ 12,4%</span>
+              <span class="kpi-badge down"><span class="badge-tag">YoY</span> ▼ 8,1%</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Ticket Médio</div>
+            <div class="kpi-value">R$ 1.318</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Evolução mensal de faturamento</span></div>
+          <div class="ds-chart-slot"><span class="meta-empty-note">Área do gráfico</span></div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch ds-sw-ol"></span>OL Multifoco</span>
+            <span class="legend-item"><span class="legend-swatch ds-sw-silver"></span>Demais Canais</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">Padrão 2 — Listagem (busca + tabela + contagem)</div>
+      <div class="chart-card">
+        <div class="chart-title-row">
+          <span class="chart-title">Ranking de Vendedores — Time OL</span>
+          <button class="btn btn-export-churn">Exportar Excel</button>
+        </div>
+        <input type="text" class="churn-search" placeholder="Buscar...">
+        <div class="churn-table-wrap">
+          <table class="ranking-table">
+            <thead><tr>
+              <th>#</th><th>Setor/Vendedor</th><th>Distribuidor</th>
+              <th class="num">Venda Líquida</th><th class="num">Ticket Médio</th><th class="num">PDVs Atendidos</th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="ranking-pos">1</td><td>César<span class="troca-badge" title="Troca de setor em mai/26">🔄</span></td><td>ABS</td><td class="num">R$ 92.400</td><td class="num">R$ 1.402</td><td class="num">66</td></tr>
+              <tr><td class="ranking-pos">2</td><td>Débora</td><td>DISMEPE</td><td class="num">R$ 55.820</td><td class="num">R$ 1.118</td><td class="num">50</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="ranking-section-label">Fora do Time (não entram no ranking competitivo)</div>
+        <div class="churn-table-wrap">
+          <table class="ranking-table">
+            <thead><tr><th>#</th><th>Setor/Vendedor</th><th>Distribuidor</th><th class="num">Venda Líquida</th></tr></thead>
+            <tbody><tr><td class="ranking-pos">1</td><td>TELEVENDAS</td><td>G1</td><td class="num">R$ 21.300</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="ds-sub">Padrão 3 — Formulário / edição (modal)</div>
+      <div class="chart-card">
+        <div class="ds-modal-static">
+          <h3>Metas Globais por Laboratório</h3>
+          <p class="modal-sub">Mês vigente: jul/26</p>
+          <div class="modal-lab-row"><label>KATIGUA</label><input type="text" value="12.500,00"></div>
+          <div class="modal-lab-row"><label>NUTRIEX</label><input type="text" value="8.300,00"></div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost">Cancelar</button>
+            <button class="btn btn-gold">Salvar e exportar CSV</button>
+          </div>
+          <p class="modal-note">Ações sempre centralizadas, com a ação primária à direita.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 8 — MOTION E INTERAÇÃO
+       ============================================================ -->
+  <section id="sec-8" class="ds-section">
+    <div class="section-title"><span class="idx">8</span> Motion e Interação<span class="section-toggle-icon" data-toggle-target="sec8-body">▾</span></div>
+    <div id="sec8-body" class="section-body">
+      <p class="ds-note">
+        O sistema é deliberadamente contido: não existe nenhuma regra <span class="ds-code">@keyframes</span> no CSS
+        original. Todo o movimento vem de cinco transições, todas com easing <span class="ds-code">ease</span>.
+      </p>
+
+      <table class="data-table">
+        <thead><tr><th>Padrão</th><th>Propriedade</th><th>Duração</th><th>Easing</th></tr></thead>
+        <tbody>
+          <tr><td>Aba (<span class="ds-code">nav.tabs button</span>)</td><td>color, border-color</td><td>0.15s</td><td>ease</td></tr>
+          <tr><td>Botão (<span class="ds-code">.btn</span>)</td><td>background, border-color</td><td>0.15s</td><td>ease</td></tr>
+          <tr><td>Item de menu (<span class="ds-code">.ms-option</span>)</td><td>background, color</td><td>—</td><td>imediato</td></tr>
+          <tr><td>Ícone de toggle de bloco</td><td>transform, color</td><td>0.15s</td><td>ease</td></tr>
+          <tr><td>Ícone de toggle de validação</td><td>transform</td><td>0.15s</td><td>ease</td></tr>
+          <tr><td>Preenchimento de gauge</td><td>width</td><td>0.3s</td><td>ease</td></tr>
+        </tbody>
+      </table>
+
+      <div class="ds-sub">Galeria de motion</div>
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Gauge — transição de largura (0.3s)</span></div>
+          <div class="gauge-row">
+            <div class="gauge-track"><div class="gauge-fill good" id="ds-gauge-demo"></div></div>
+            <div class="gauge-pct" id="ds-gauge-pct">92%</div>
+          </div>
+          <button class="btn btn-export-churn ds-mt" id="ds-gauge-btn">Animar</button>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Ícone de toggle — rotação (0.15s)</span></div>
+          <div class="section-title ds-inline-title"><span class="idx">4</span> Bloco colapsável<span class="section-toggle-icon" data-toggle-target="ds-motion-1">▾</span></div>
+          <div id="ds-motion-1" class="section-body">
+            <div class="placeholder-block">Conteúdo · <span class="ds-code">rotate(-90deg)</span> ao colapsar</div>
+          </div>
+          <div class="validation-toggle-row" data-ds-toggle="ds-motion-2">
+            <span class="validation-toggle-icon">▸</span> Painel · <span class="ds-code">rotate(90deg)</span> ao expandir
+          </div>
+          <div class="validation-panel collapsed" id="ds-motion-2">
+            <div class="stat-tile"><div class="stat-label">Revelado</div><div class="stat-value">✓</div></div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Abas e botões — cor/borda (0.15s)</span></div>
+          <nav class="tabs ds-bare">
+            <button class="active">Distribuidores</button>
+            <button>Operação OL</button>
+          </nav>
+          <div class="ds-states ds-mt">
+            <div class="ds-state"><button class="btn">Passe o mouse</button></div>
+            <div class="ds-state"><button class="btn btn-gold">Passe o mouse</button></div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Dropdown e modal — sem animação</span></div>
+          <p class="ds-note">
+            O painel do multi-select alterna <span class="ds-code">display: none/block</span> e o modal alterna
+            <span class="ds-code">display: none/flex</span>. Ambos aparecem instantaneamente — sem fade, scale ou
+            slide. Linhas de tabela e itens de menu também trocam de fundo sem transição.
+          </p>
+          <button class="btn btn-gold" data-ds-open-modal="ds-modal">Abrir modal</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SEÇÃO 9 — ÍCONES
+       ============================================================ -->
+  <section id="sec-9" class="ds-section">
+    <div class="section-title"><span class="idx">9</span> Ícones<span class="section-toggle-icon" data-toggle-target="sec9-body">▾</span></div>
+    <div id="sec9-body" class="section-body">
+      <p class="ds-note">
+        <strong>Não há biblioteca de ícones</strong> (nem Lucide, Heroicons, FontAwesome ou Material). A aplicação usa
+        glifos Unicode inseridos como texto, que herdam automaticamente cor e tamanho do contexto. A única exceção é o
+        caret do <span class="ds-code">&lt;select&gt;</span>, um SVG embutido como
+        <span class="ds-code">background-image: url("data:image/svg+xml,...")</span> com fill fixo
+        <span class="ds-code">#898781</span> — ou seja, é o único ícone que <em>não</em> herda cor.
+      </p>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Navegação e estrutura</span></div>
+          <table class="data-table">
+            <thead><tr><th>Glifo</th><th>Uso</th><th>Contexto</th></tr></thead>
+            <tbody>
+              <tr><td>▾</td><td>Toggle de bloco / caret</td><td><span class="ds-code">.section-toggle-icon</span>, <span class="ds-code">.ms-caret</span></td></tr>
+              <tr><td>▸</td><td>Painel recolhido</td><td><span class="ds-code">.validation-toggle-icon</span></td></tr>
+              <tr><td>×</td><td>Fechar / limpar</td><td><span class="ds-code">.modal-close</span>, <span class="ds-code">.ms-clear</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Dados e ordenação</span></div>
+          <table class="data-table">
+            <thead><tr><th>Glifo</th><th>Uso</th><th>Contexto</th></tr></thead>
+            <tbody>
+              <tr><td>▲ ▼</td><td>Direção de ordenação</td><td><span class="ds-code">.sort-arrow</span></td></tr>
+              <tr><td>▲ ▼ ▬</td><td>Variação MoM / YoY</td><td><span class="ds-code">.kpi-badge</span></td></tr>
+              <tr><td>ⓘ</td><td>Detalhe em hover</td><td><span class="ds-code">.troca-badge</span></td></tr>
+              <tr><td>🔄</td><td>Troca de setor/vendedor</td><td><span class="ds-code">.troca-badge</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Status e ações</span></div>
+          <table class="data-table">
+            <thead><tr><th>Glifo</th><th>Uso</th><th>Contexto</th></tr></thead>
+            <tbody>
+              <tr><td>✓</td><td>Validação positiva</td><td><span class="ds-code">.stat-check.ok</span>, <span class="ds-code">.alert-badge.ok</span></td></tr>
+              <tr><td>✗</td><td>Divergência</td><td><span class="ds-code">.stat-check.warn</span></td></tr>
+              <tr><td>⚠</td><td>Alerta de limite</td><td><span class="ds-code">.alert-badge</span></td></tr>
+              <tr><td>🔒</td><td>Ação com permissão pendente</td><td><span class="ds-code">.btn-ghost</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title-row"><span class="chart-title">Herança de cor e tamanho</span></div>
+          <div class="ds-states">
+            <div class="ds-state">
+              <div class="ds-row-name">Em texto auxiliar</div>
+              <div class="stat-check neutral">▾ herda --ink-muted · 11.5px</div>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Em badge de sucesso</div>
+              <span class="churn-badge ativo">✓ Ativo</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Em badge crítico</div>
+              <span class="churn-badge perdido">⚠ Perdido</span>
+            </div>
+            <div class="ds-state">
+              <div class="ds-row-name">Em título de seção</div>
+              <div class="section-title ds-inline-title">Bloco<span class="section-toggle-icon">▾</span></div>
+            </div>
+          </div>
+          <div class="donut-sub-note ds-left ds-mt">
+            Tamanhos praticados: 11px (<span class="ds-code">.sort-arrow</span>, ícone de validação),
+            12px (<span class="ds-code">.ms-caret</span>, toggle de bloco), 13px (<span class="ds-code">.troca-badge</span>),
+            16px (<span class="ds-code">.ms-clear</span>), 20px (<span class="ds-code">.modal-close</span>).
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  Multifoco Representações · Design System extraído do Dashboard Comercial 2.0 · Padrões, classes e tokens preservados da aplicação original
+</footer>
+
+<div class="chart-tooltip"></div>
+
+<!-- ===== Modal de demonstração ===== -->
+<div class="modal-overlay" id="ds-modal">
+  <div class="modal-box">
+    <button class="modal-close" data-close-modal>×</button>
+    <h3>Metas Globais por Laboratório</h3>
+    <p class="modal-sub">Mês vigente: jul/26</p>
+    <div class="modal-lab-row"><label>KATIGUA</label><input type="text" value="12.500,00"></div>
+    <div class="modal-lab-row"><label>NUTRIEX</label><input type="text" value="8.300,00"></div>
+    <div class="modal-lab-row"><label>MCG</label><input type="text" value="5.100,00"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close-modal>Cancelar</button>
+      <button class="btn btn-gold" data-close-modal>Salvar e exportar CSV</button>
+    </div>
+    <p class="modal-note">Ao salvar, o dashboard grava automaticamente um arquivo <strong>Metas_&lt;mês&gt;.csv</strong> na pasta escolhida (Chrome/Edge).</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ds-modal-2">
+  <div class="modal-box">
+    <button class="modal-close" data-close-modal>×</button>
+    <h3>Importar Metas por Vendedor</h3>
+    <p class="modal-sub">Passo 1 de 2</p>
+    <p class="modal-step">Escolha o distribuidor e o mês a que essas metas se referem, para gerar o modelo padrão já pré-preenchido.</p>
+    <div class="modal-field">
+      <label>Distribuidor</label>
+      <select><option>ABS</option><option>DISMEPE</option></select>
+    </div>
+    <div class="modal-field">
+      <label>Mês de referência das metas</label>
+      <select><option>jul/26</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close-modal>Cancelar</button>
+      <button class="btn btn-gold" data-close-modal>Baixar modelo (.xlsx)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Comportamentos replicados da aplicação original (abas, toggles, multi-select, modal).
+  document.querySelectorAll('nav.tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs .tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.section-toggle-icon[data-toggle-target]').forEach(icon => {
+    icon.addEventListener('click', () => {
+      const target = document.getElementById(icon.dataset.toggleTarget);
+      if (!target) return;
+      target.classList.toggle('collapsed');
+      icon.classList.toggle('collapsed');
+    });
+  });
+
+  document.querySelectorAll('[data-ds-toggle]').forEach(row => {
+    row.addEventListener('click', () => {
+      const panel = document.getElementById(row.dataset.dsToggle);
+      if (!panel) return;
+      panel.classList.toggle('collapsed');
+      row.classList.toggle('expanded');
+      row.querySelector('.validation-toggle-icon').textContent = panel.classList.contains('collapsed') ? '▸' : '▾';
+    });
+  });
+
+  document.querySelectorAll('[data-ms] .ms-button').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wrap = btn.closest('.ms-wrap');
+      const wasOpen = wrap.classList.contains('open');
+      document.querySelectorAll('.ms-wrap[data-ms].open').forEach(w => w.classList.remove('open'));
+      if (!wasOpen) wrap.classList.add('open');
+    });
+  });
+  document.querySelectorAll('[data-ms] .ms-panel').forEach(p => p.addEventListener('click', e => e.stopPropagation()));
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.ms-wrap[data-ms].open').forEach(w => w.classList.remove('open'));
+  });
+
+  document.querySelectorAll('[data-ds-open-modal]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(btn.dataset.dsOpenModal).classList.add('open');
+    });
+  });
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('.modal-overlay').classList.remove('open'));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+  });
+
+  const gaugeBtn = document.getElementById('ds-gauge-btn');
+  if (gaugeBtn) {
+    const fill = document.getElementById('ds-gauge-demo');
+    const pct = document.getElementById('ds-gauge-pct');
+    let on = true;
+    gaugeBtn.addEventListener('click', () => {
+      on = !on;
+      fill.classList.remove('ds-w-92', 'ds-w-38', 'good', 'critical');
+      fill.classList.add(on ? 'ds-w-92' : 'ds-w-38', on ? 'good' : 'critical');
+      pct.textContent = on ? '92%' : '38%';
+    });
+  }
+</script>
+
+</body>
+</html>

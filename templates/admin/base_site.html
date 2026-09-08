@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static "css/admin.css" %}?v=20260827-2">
+{% endblock %}
+{% block extrahead %}{{ block.super }}
+<script src="{% static "js/admin.js" %}" defer></script>
+{% endblock %}
+{% block branding %}
+<h1 id="site-name"><a href="{% url "home" %}"><span class="admin-mark">CC</span> CRED-COBR</a></h1>
+{% endblock %}

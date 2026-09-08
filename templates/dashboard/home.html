@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Visão geral | CRED-COBR{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">RESUMO EXECUTIVO</p><h1>Visão geral</h1><p class="muted">Última atualização: {% if last_update %}{{ last_update|date:"m/d/Y H:i" }}{% else %}sem dados importados{% endif %}</p></div></div>
+{% if failed_imports or failed_notifications %}<div class="alert alert-error" role="alert">Atenção: {{ failed_imports }} importação(ões) e {{ failed_notifications }} distribuição(ões) com falha.</div>{% endif %}
+<section class="metric-grid" aria-label="Indicadores de vencimento">
+  <article class="metric-card"><span>Vencido total</span><strong>R$ {{ overdue_bands.overdue_total|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 1 a 10 dias</span><strong>R$ {{ overdue_bands.days_1_10|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 11 a 30 dias</span><strong>R$ {{ overdue_bands.days_11_30|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 31 a 90 dias</span><strong>R$ {{ overdue_bands.days_31_90|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 91 a 360 dias</span><strong>R$ {{ overdue_bands.days_91_360|floatformat:"2gu" }}</strong></article>
+</section>
+<section class="metric-grid" aria-label="Indicadores de operação">
+  <article class="metric-card"><span>Promessas vencidas</span><strong>{{ expired_promises }}</strong></article>
+  <article class="metric-card"><span>Acordos feitos por gestores</span><strong>{{ agreements_count }}</strong></article>
+</section>
+<section class="metric-grid" aria-label="Inadimplência por estado">
+  {% for code, item in by_state.items %}<article class="metric-card"><span>Inadimplência {{ code }}</span><strong>{{ item.delinquency_percentage|floatformat:"2gu" }}%</strong></article>{% empty %}<article class="metric-card"><span>Inadimplência por estado</span><strong>0,00%</strong></article>{% endfor %}
+</section>
+<section class="panel dashboard-comparison-panel"><div class="panel-heading"><div><p class="eyebrow">COMPARATIVO</p><h2>Inadimplência por estado</h2></div><span class="muted">Vencidos acima de 10 dias</span></div><div class="chart-container chart-container-comparison"><canvas id="state-delinquency-chart" aria-label="Comparativo de inadimplência por estado"></canvas></div></section>
+<section class="panel"><div class="panel-heading"><h2>Por estado</h2></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Carteira</th><th>Vencido &gt; 10 dias</th><th>Inadimplência</th><th></th></tr></thead><tbody>{% for code, item in by_state.items %}<tr><td><strong>{{ code }}</strong></td><td>R$ {{ item.portfolio_total|floatformat:"2gu" }}</td><td>R$ {{ item.overdue_over_ten|floatformat:"2gu" }}</td><td>{{ item.delinquency_percentage|floatformat:"2gu" }}%</td><td><a href="{% url 'state-dashboard' code %}">Abrir</a></td></tr>{% empty %}<tr><td colspan="5" class="empty">Nenhum dado disponivel.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
+
+{% block scripts %}{{ state_comparison|json_script:"state-comparison-json" }}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script type="module">const data = JSON.parse(document.getElementById("state-comparison-json").textContent); window.renderStateComparisonChart(data);</script>{% endblock %}

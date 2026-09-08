@@ -1,0 +1,44 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CRED-COBR{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260827-4">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if request.user.is_authenticated and request.resolver_match.url_name != 'login' %}
+  <header class="app-header">
+    <a class="brand" href="{% url 'home' %}" aria-label="CRED-COBR página inicial"><span class="mark">CC</span><span><strong>CRED-COBR</strong><small>Relatórios e cobrança</small></span></a>
+    <div class="header-meta">{{ request.user.get_full_name|default:request.user.username }} · {{ request.user.get_role_display }} <form class="logout-form" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-quiet" type="submit">Sair</button></form></div>
+  </header>
+  {% endif %}
+  <div class="shell">
+    {% if request.user.is_authenticated and request.resolver_match.url_name != 'login' %}
+    <aside class="sidebar" aria-label="Navegação principal">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-menu">Menu</button>
+      <nav id="main-menu">
+        <a href="{% url 'home' %}">Visão geral</a>
+        <a href="{% url 'receivable-list' %}">Boletos</a>
+        <a href="{% url 'report-list' %}">Relatórios</a>
+        {% for state in navigation_states %}<a href="{% url 'state-dashboard' state.code %}">Dashboard {{ state.code }}</a>{% endfor %}
+        {% if request.user.role == "administrator" or request.user.is_superuser %}<a href="{% url 'admin:accounts_user_changelist' %}">Usuários</a>{% endif %}
+      </nav>
+    </aside>
+    {% endif %}
+    <main class="content">
+      {% block messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'success' }}" role="status">{{ message }}</div>{% endfor %}{% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% if request.user.is_authenticated and request.resolver_match.url_name != 'login' %}
+  <footer class="footer">CRED-COBR · Dados internos</footer>
+  {% endif %}
+  <script src="{% static 'js/app.js' %}?v=20260903-2" type="module"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

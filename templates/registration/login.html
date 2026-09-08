@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Login | CRED-COBR{% endblock %}
+{% block content %}
+<section class="auth-card" aria-labelledby="login-title">
+  <h1 id="login-title">Entrar</h1>
+  {% if form.errors %}<div class="alert alert-error" role="alert">Usuario ou senha invalidos.</div>{% endif %}
+  <form method="post" data-prevent-double-submit>{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Acessar</button></form>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Relatórios | CRED-COBR{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">12 RELATÓRIOS OPERACIONAIS</p><h1>Relatórios de boletos vencidos</h1><p class="muted">CE, BA e PE consolidado (Nova + Multi), classificados pela data de vencimento.</p></div></div>
+
+<form class="filter-bar report-filter-bar" method="get" aria-label="Filtros dos relatórios">
+  <div class="filter-field">
+      <label for="id_band">Faixa de vencimento</label>
+      <select id="id_band" name="band" onchange="this.form.submit()">
+        <option value="">Todas as faixas</option>{% for value,label in band_choices %}<option value="{{ value }}" {% if selected_band == value %}selected{% endif %}{% if value not in available_bands %} disabled{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="id_state">Estado</label>
+      <select id="id_state" name="state" onchange="this.form.submit()">
+        <option value="">Todos os estados</option>
+        {% for state in states %}<option value="{{ state }}" {% if selected_state == state %}selected{% endif %}{% if state not in available_states %} disabled{% endif %}>{{ state }}{% if state == "PE" %} — Nova + Multi{% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="id_report_date">Data de referência</label>
+      <input id="id_report_date" type="text" name="report_date" value="{{ selected_date }}" placeholder="MM/DD/AAAA" list="report-date-options" onchange="this.form.submit()">
+      <datalist id="report-date-options">{% for value in available_dates %}<option value="{{ value }}">{% endfor %}</datalist>
+  </div>
+  <div class="filter-actions">
+    <a class="btn btn-ghost" href="{% url 'report-list' %}">Limpar</a>
+    <button class="btn btn-gold" type="submit">Aplicar filtros</button>
+  </div>
+</form>
+
+<div class="report-filter-summary" role="status">
+  <div><span class="summary-label">Faixa selecionada</span><strong>{{ selected_band_label }}</strong></div>
+  <div><span class="summary-label">Estado</span><strong>{{ selected_state|default:"CE, BA e PE" }}</strong></div>
+  <div><span class="summary-label">Relatórios encontrados</span><strong>{{ band_report_count }}</strong></div>
+</div>
+
+<section class="panel"><div class="panel-heading"><div><p class="eyebrow">RESULTADOS FILTRADOS</p><h2>{{ selected_band_label }}</h2></div></div><div class="table-wrap"><table><thead><tr><th>Estado</th><th>Empresas consideradas</th><th>Faixa</th><th>Data-base</th><th>Boletos</th><th>Situação</th><th>Ação</th></tr></thead><tbody>
+{% for report in band_reports %}<tr><td><strong>{{ report.state.code }}</strong></td><td>{% if report.state.code == "PE" %}Nova + Multi{% else %}Todas do estado{% endif %}</td><td>{{ report.get_overdue_band_display }}</td><td>{{ report.report_date|date:"m/d/Y" }}</td><td>{{ report.rows_processed }}</td><td><span class="status status-{{ report.status }}">{{ report.get_status_display }}</span></td><td>{% if report.status == "completed" and report.pdf_file_path %}<a class="btn btn-primary" href="{% url 'report-pdf' report.pk %}" target="_blank">Visualizar PDF</a> <a class="btn btn-quiet" href="{% url 'report-pdf' report.pk %}" download>Baixar PDF</a>{% else %}Indisponível{% endif %}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">Nenhum relatório encontrado para os filtros selecionados.</td></tr>{% endfor %}
+</tbody></table></div></section>
+
+<section class="panel"><div class="panel-heading"><h2>Arquivos consolidados e resumo executivo</h2></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Estado</th><th>Tipo</th><th>Registros</th><th>Ação</th></tr></thead><tbody>{% for report in other_reports %}<tr><td>{{ report.report_date|date:"m/d/Y" }}</td><td>{{ report.state.code|default:"Geral" }}</td><td>{{ report.get_report_type_display }}</td><td>{{ report.rows_processed }}</td><td>{% if report.status == "completed" and report.file_path %}<a class="btn btn-quiet" href="{% url 'report-download' report.pk %}">Baixar</a>{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="empty">Nenhum arquivo consolidado disponível.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
