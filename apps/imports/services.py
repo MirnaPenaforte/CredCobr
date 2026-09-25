@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.companies.models import Company, EconomicGroup, State
 from apps.customers.models import Customer
+from apps.customers.visibility import is_hidden_customer_name
 from apps.receivables.models import Receivable
 from shared.dates import parse_date
 
@@ -86,7 +87,7 @@ def persist_records(records: Iterable[NormalizedReceivableRecord]) -> int:
             raise ValueError("Empresa, cliente, documento e parcela são obrigatórios")
         unique_records[(record.state, record.company, record.title_number, record.installment)] = record
 
-    normalized = list(unique_records.values())
+    normalized = [record for record in unique_records.values() if not is_hidden_customer_name(record.customer_name)]
     state_codes = {record.state for record in normalized}
     State.objects.bulk_create(
         [State(code=code, name=code) for code in state_codes],

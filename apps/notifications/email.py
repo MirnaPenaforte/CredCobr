@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.reports.models import ReportExecution
 
+from .attachments import resolve_report_path
 from .models import Notification, Recipient
 
 logger = logging.getLogger(__name__)
@@ -72,20 +73,30 @@ def send_commitment_default_alert(*, operator, receivable, commitment_type: str,
     return notification
 
 
-@transaction.atomic
 def send_report_email(
     *,
     report: ReportExecution,
     recipients: Iterable[Recipient],
     attachments: Iterable[ReportExecution] | None = None,
+    extra_paths: Iterable[Path] | None = None,
+    attach_report: bool = True,
     subject: str | None = None,
     force: bool = False,
 ) -> list[Notification]:
     sent: list[Notification] = []
+    attachment_reports: list[ReportExecution] = []
+    seen_ids: set[int] = set()
+    for candidate in ([report] if attach_report else []) + list(attachments or []):
+        if candidate.pk not in seen_ids:
+            seen_ids.add(candidate.pk)
+            attachment_reports.append(candidate)
+    extra_files = [Path(path) for path in (extra_paths or [])]
+    attachment_ids = sorted({item.pk for item in attachment_reports})
+    extra_suffix = f":{','.join(path.name for path in extra_files)}" if extra_files else ""
     for recipient in recipients:
         if not recipient.active or not recipient.email:
             continue
-        key = f"email:{report.pk}:{recipient.pk}"
+        key = f"email:{report.pk}:{recipient.pk}:{','.join(str(item) for item in attachment_ids)}{extra_suffix}"
         notification, created = Notification.objects.get_or_create(
             idempotency_key=key,
             defaults={
@@ -107,12 +118,18 @@ def send_report_email(
                 to=[recipient.email],
             )
             email.attach_alternative(render_to_string("notifications/report_email.html", {"recipient": recipient, "report": report}), "text/html")
-            for attachment_report in attachments or [report]:
+            for attachment_report in attachment_reports:
                 if not attachment_report.file_path:
-                    continue
-                path = Path(attachment_report.file_path)
-                if path.is_file():
-                    email.attach(path.name, path.read_bytes(), "application/octet-stream")
+                    raise FileNotFoundError(f"Relatório {attachment_report.pk} não possui arquivo")
+                path = resolve_report_path(attachment_report.file_path)
+                if path is None:
+                    raise FileNotFoundError(f"Arquivo do relatório {attachment_report.pk} não encontrado")
+                email.attach(path.name, path.read_bytes(), "application/octet-stream")
+            for path in extra_files:
+                resolved_path = resolve_report_path(path)
+                if resolved_path is None:
+                    raise FileNotFoundError(f"Anexo não encontrado: {path}")
+                email.attach(resolved_path.name, resolved_path.read_bytes(), "application/octet-stream")
             email.send(fail_silently=False)
             notification.status = Notification.Status.SENT
             notification.sent_at = timezone.now()

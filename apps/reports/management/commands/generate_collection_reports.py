@@ -2,18 +2,16 @@ from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.reports.generators.pdf import generate_executive_pdf
 from apps.reports.services import generate_all_reports
 from shared.dates import format_date, parse_date
 
 
 class Command(BaseCommand):
-    help = "Gera relatórios estaduais de cobrança e o resumo executivo opcional."
+    help = "Gera os relatórios estaduais de cobrança (vencidos e a vencer)."
 
     def add_arguments(self, parser):
         parser.add_argument("--date")
         parser.add_argument("--state", choices=["CE", "BA", "PE"])
-        parser.add_argument("--pdf", action="store_true")
 
     def handle(self, *args, **options):
         try:
@@ -25,6 +23,3 @@ class Command(BaseCommand):
         self.stdout.write(f"Data de referência: {format_date(target_date)}")
         for execution in executions:
             self.stdout.write(f"{execution.state.code}: {execution.status} - {execution.file_path}")
-        if options["pdf"]:
-            execution = generate_executive_pdf(target_date)
-            self.stdout.write(f"PDF executivo: {execution.status} - {execution.file_path}")

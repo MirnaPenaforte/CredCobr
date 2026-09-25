@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.audit.services import record_audit
+from apps.notifications.tasks import send_user_reports
 
 from .forms import UserCreateForm, UserPasswordForm, UserUpdateForm
 from .models import User
@@ -27,6 +28,7 @@ def _user_snapshot(user):
     return {
         "username": user.username, "name": user.get_full_name(), "email": user.email,
         "whatsapp_number": user.whatsapp_number, "role": user.role, "is_active": user.is_active,
+        "report_states": list(user.report_states.values_list("code", flat=True)),
     }
 
 
@@ -109,6 +111,23 @@ def user_toggle_active(request, pk):
         record_audit(user=request.user, action="activated" if user.is_active else "deactivated",
                      model_name="accounts.User", object_id=str(user.pk), new_value=_user_snapshot(user), origin="user_management")
         messages.success(request, f"Usuário {user.username} {'ativado' if user.is_active else 'desativado'}.")
+    return redirect("user-list")
+
+
+@administrator_required
+@require_POST
+def user_send_reports(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    states = list(user.report_states.values_list("code", flat=True))
+    if not user.email:
+        messages.error(request, "O usuário não possui e-mail cadastrado.")
+    elif not states:
+        messages.error(request, "Selecione ao menos um estado de relatório para este usuário.")
+    else:
+        send_user_reports.delay(user.pk, force=True)
+        record_audit(user=request.user, action="reports_sent", model_name="accounts.User", object_id=str(user.pk),
+                     new_value={"email": user.email, "states": states}, origin="user_management")
+        messages.success(request, f"Envio de relatórios iniciado para {user.username}.")
     return redirect("user-list")
 
 

@@ -43,6 +43,7 @@ def build_legacy_query(columns: set[str]) -> str:
     group_name = _column(columns, "Gp_Cliente", "Des_GrpCli")
     establishment = _column(columns, "Estabecimento", "Estabelecimento", "Cod_Estabe")
     source_reference = _column(columns, "Cod_Documento", "Num_Documento")
+    customer_name = _column(columns, "Razao_Social")
     due_date = _column(columns, "Dat_Vencimento")
     issued_at = _column(columns, "Dat_Emissao")
 
@@ -78,7 +79,8 @@ def build_legacy_query(columns: set[str]) -> str:
     CAST({optional('Cod_Estabe')} AS varchar(40)) AS establishment_code
 FROM {LEGACY_DATABASE_VIEW}
 WHERE CONVERT(date, {issued_at}, 101) >= DATEFROMPARTS({LEGACY_COLLECTION_YEAR}, 1, 1)
-  AND CONVERT(date, {issued_at}, 101) < DATEFROMPARTS({NEXT_COLLECTION_YEAR}, 1, 1)"""
+  AND CONVERT(date, {issued_at}, 101) < DATEFROMPARTS({NEXT_COLLECTION_YEAR}, 1, 1)
+  AND UPPER(LTRIM(RTRIM({customer_name}))) NOT IN (N'REDE S.O.S EDUARDO', N'REDE KEKA')"""
 
 
 LEGACY_COLUMNS = {

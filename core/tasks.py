@@ -31,52 +31,41 @@ def run_full_collection_pipeline(self: Any) -> dict[str, object]:
             logger.warning("full_pipeline_skipped task_id=%s reason=lock_conflict", self.request.id)
             return {"status": "skipped", "reason": "lock_conflict"}
 
-        result: dict[str, object] = {"status": "started", "phases": {}}
+        from apps.imports.tasks import collect_all_sources
+        from apps.reports.tasks import generate_reports
+        from apps.notifications.tasks import send_all_reports
 
-        try:
-            from apps.imports.tasks import collect_all_sources
-            result["phases"]["collection"] = collect_all_sources()
-        except Exception:
-            result["phases"]["collection"] = {"status": "failed"}
-            logger.exception("full_pipeline_collection_failed task_id=%s", self.request.id)
+        collection = collect_all_sources()
+        legacy = collection.get("legacy", {})
+        if legacy.get("status") != "completed" or legacy.get("imported_rows", 0) <= 0:
+            raise RuntimeError("Coleta legada falhou ou não retornou dados; relatórios e e-mails não foram enviados")
 
-        try:
-            from apps.reports.tasks import generate_reports
-            result["phases"]["reports"] = generate_reports(reference_date=format_date(date.today()))
-        except Exception:
-            result["phases"]["reports"] = {"status": "failed"}
-            logger.exception("full_pipeline_reports_failed task_id=%s", self.request.id)
+        reports = generate_reports(reference_date=format_date(timezone.localdate()))
+        executions = reports.get("executions", [])
+        if reports.get("count") != 6 or len(executions) != 6 or any(
+            item.get("status") != "completed" for item in executions
+        ):
+            raise RuntimeError("Geração incompleta dos seis relatórios; e-mails não foram enviados")
 
-        try:
-            from apps.notifications.tasks import send_all_reports
-            result["phases"]["notification"] = send_all_reports()
-        except Exception:
-            result["phases"]["notification"] = {"status": "failed"}
-            logger.exception("full_pipeline_notification_failed task_id=%s", self.request.id)
+        notification = send_all_reports()
+        if notification.get("total_deliveries", 0) == 0:
+            raise RuntimeError("Nenhum destinatário configurado para envio dos relatórios")
+        if notification.get("failed_deliveries", 0):
+            raise RuntimeError(
+                f"Falha no envio de {notification['failed_deliveries']} relatório(s) por e-mail"
+            )
 
-        result["status"] = "completed"
-        result["completed_at"] = timezone.now().isoformat()
+        result = {
+            "status": "completed",
+            "phases": {
+                "collection": collection,
+                "reports": reports,
+                "notification": notification,
+            },
+            "completed_at": timezone.now().isoformat(),
+        }
         logger.info("full_pipeline_completed task_id=%s", self.request.id)
         return result
-
-
-@shared_task(bind=True, name="core.tasks.run_supplementary_collection")
-def run_supplementary_collection(self: Any) -> dict[str, object]:
-    logger.info("supplementary_collection_started task_id=%s", self.request.id)
-
-    with task_lock("supplementary_collection") as acquired:
-        if not acquired:
-            logger.warning("supplementary_collection_skipped task_id=%s reason=lock_conflict", self.request.id)
-            return {"status": "skipped", "reason": "lock_conflict"}
-
-        try:
-            from apps.imports.tasks import collect_all_sources
-            result = collect_all_sources()
-            logger.info("supplementary_collection_completed task_id=%s", self.request.id)
-            return {"status": "completed", "collection": result}
-        except Exception:
-            logger.exception("supplementary_collection_failed task_id=%s", self.request.id)
-            raise
 
 
 @shared_task(bind=True, name="core.tasks.verify_expired_promises")

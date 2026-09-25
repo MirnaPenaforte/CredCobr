@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import customer_receivables_detail, home, receivable_detail, receivable_list, report_download, report_list, report_pdf, state_dashboard
+from .views import customer_receivables_detail, home, receivable_detail, receivable_list, report_download, report_list, state_dashboard
 
 
 urlpatterns = [
@@ -11,5 +11,4 @@ urlpatterns = [
     path("receivables/<int:pk>/", receivable_detail, name="receivable-detail"),
     path("reports/", report_list, name="report-list"),
     path("reports/<int:pk>/download/", report_download, name="report-download"),
-    path("reports/<int:pk>/pdf/", report_pdf, name="report-pdf"),
 ]

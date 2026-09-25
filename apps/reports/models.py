@@ -6,11 +6,10 @@ from shared.models import TimestampedModel
 class ReportExecution(TimestampedModel):
     class Type(models.TextChoices):
         STATE_EXCEL = "state_excel", "Excel estadual consolidado"
-        BAND_EXCEL = "band_excel", "Excel por faixa"
-        EXECUTIVE_PDF = "executive_pdf", "PDF executivo"
+        UPCOMING_EXCEL = "upcoming_excel", "Excel a vencer"
 
     class Band(models.TextChoices):
-        DAYS_1_10 = "1_10", "Até 10 dias"
+        DAYS_5_10 = "5_10", "De 5 a 10 dias"
         DAYS_11_30 = "11_30", "De 11 a 30 dias"
         DAYS_31_90 = "31_90", "De 31 a 90 dias"
         DAYS_91_360 = "91_360", "De 91 a 360 dias"
@@ -19,6 +18,7 @@ class ReportExecution(TimestampedModel):
         PENDING = "pending", "Pendente"
         PROCESSING = "processing", "Processando"
         COMPLETED = "completed", "Concluído"
+        SUPERSEDED = "superseded", "Substituído"
         FAILED = "failed", "Falhou"
 
     state = models.ForeignKey("companies.State", on_delete=models.PROTECT, null=True, blank=True)

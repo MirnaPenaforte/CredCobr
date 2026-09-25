@@ -22,6 +22,13 @@ class User(AbstractUser):
         validators=[whatsapp_validator],
         help_text="Use o formato internacional com +, código do país e DDD. Ex.: +5585999999999.",
     )
+    report_states = models.ManyToManyField(
+        "companies.State",
+        blank=True,
+        related_name="report_recipients",
+        verbose_name="Estados dos relatórios por e-mail",
+        help_text="Selecione os estados cujos dois relatórios devem ser enviados para este usuário.",
+    )
 
     def save(self, *args, **kwargs):
         if self.is_superuser:

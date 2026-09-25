@@ -10,8 +10,8 @@ DATE_INPUT_FORMATS = ["%m/%d/%Y", "%Y-%m-%d"]
 
 def date_widget(placeholder: str) -> forms.DateInput:
     return forms.DateInput(
-        format="%m/%d/%Y",
-        attrs={"type": "text", "placeholder": f"{placeholder} (MM/DD/AAAA)"},
+        format="%Y-%m-%d",
+        attrs={"type": "date", "aria-label": placeholder},
     )
 
 

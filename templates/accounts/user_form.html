@@ -13,6 +13,13 @@
   </div></div>
   <div class="form-section"><h2>Acesso e papel</h2><div class="form-grid">
     <div>{{ form.role.label_tag }}{{ form.role }}{{ form.role.errors }}<small>Administradores podem gerir usuários e acessar todas as funções. Gestores têm acesso operacional.</small></div>
+    <div class="field-wide report-states-field">
+      {{ form.report_states.label_tag }}
+      <div class="report-states-options">
+        {% for checkbox in form.report_states %}<label class="report-state-option">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% endfor %}
+      </div>
+      {{ form.report_states.errors }}<small>{{ form.report_states.help_text }}</small>
+    </div>
     {% if mode == "update" %}<div class="check-field">{{ form.is_active }}<label for="{{ form.is_active.id_for_label }}">Usuário ativo</label>{{ form.is_active.errors }}<small>Usuários inativos não conseguem entrar no sistema.</small></div>{% else %}<div class="form-spacer" aria-hidden="true"></div>{% endif %}
     {% if mode == "create" %}<div class="password-field">{{ form.password1.label_tag }}{{ form.password1 }}{{ form.password1.errors }}<small class="password-help">{{ form.password1.help_text }}</small></div><div class="password-field">{{ form.password2.label_tag }}{{ form.password2 }}{{ form.password2.errors }}</div>{% endif %}
   </div></div>

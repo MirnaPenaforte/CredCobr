@@ -1,0 +1,16 @@
+# Secrets and local data must not enter the image build context.
+.env
+.env.*
+.git
+.venv
+__pycache__
+*.pyc
+db.sqlite3
+db.sqlite3-journal
+staticfiles
+media
+reports
+imports
+backups
+tests
+*.log

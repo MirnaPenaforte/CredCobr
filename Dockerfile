@@ -6,9 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn whitenoise
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+RUN DJANGO_SETTINGS_MODULE=core.settings.base python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

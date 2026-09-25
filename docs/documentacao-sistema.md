@@ -14,7 +14,7 @@ Os estados operados são CE, BA e PE. No dashboard, empresas Nova e Multi são c
 - Consulta e filtragem de carteira por estado, empresa, grupo, operador, situação e vencimento.
 - Registro de contatos, promessas de pagamento e acordos parcelados.
 - Dashboards estaduais com indicadores e rankings de devedores.
-- Relatórios Excel e PDF por estado e faixa de atraso.
+- Relatórios Excel por estado, com abas por faixa de atraso e uma planilha de títulos a vencer.
 - Gestão de usuários própria, com papéis Administrador e Gestor.
 - Auditoria de ações relevantes e notificações por e-mail/WhatsApp.
 - Processamento assíncrono por Celery e tarefas agendadas por Celery Beat.
@@ -60,7 +60,7 @@ Django (views, DRF, templates)
 - PostgreSQL em container ou SQLite no desenvolvimento local
 - Celery, Celery Beat e Redis
 - Pandas, OpenPyXL e xlrd para importação
-- ReportLab e OpenPyXL para relatórios
+- OpenPyXL para relatórios Excel
 - Gunicorn para servir a aplicação em container
 - Docker Compose para ambiente integrado
 
@@ -148,7 +148,7 @@ Faixas usadas nos relatórios e indicadores:
 
 | Dias em atraso | Faixa |
 | --- | --- |
-| 1 a 10 | Até 10 dias |
+| 5 a 10 | De 5 a 10 dias |
 | 11 a 30 | De 11 a 30 dias |
 | 31 a 90 | De 31 a 90 dias |
 | 91 a 360 | De 91 a 360 dias |
@@ -241,14 +241,14 @@ O alerta depende de e-mail cadastrado no usuário responsável e de SMTP configu
 
 ## 10. Relatórios
 
-O sistema produz Excel estadual consolidado, Excel por faixa de atraso e PDF executivo. Cada execução registra estado, tipo, data de referência, situação, arquivos, checksum, quantidade de linhas e mensagens de erro.
+O sistema produz, por estado, um Excel de cobrança consolidado com abas Resumo, Todas as duplicatas, 5_10, 11_30, 31_90 e 91_360; e um Excel de títulos a vencer. A coluna "Nome do cliente" não faz parte desses arquivos. Cada execução registra estado, tipo, data de referência, situação, arquivo, checksum, quantidade de linhas e mensagens de erro. Após uma geração concluída, somente a versão mais recente por estado e tipo fica disponível; o histórico de notificações permanece no banco.
 
 Comandos úteis:
 
 ```bash
 python manage.py generate_collection_reports
-python manage.py generate_collection_reports --state CE --pdf
-python manage.py generate_collection_reports --date 09/08/2026
+python manage.py generate_collection_reports --state CE
+python manage.py generate_collection_reports --date 2026-09-08
 python manage.py run_collection_pipeline
 python manage.py run_collection_pipeline --state BA
 python manage.py run_collection_pipeline --skip-collection
@@ -278,7 +278,7 @@ Todas as APIs usam autenticação de sessão e exigem usuário autenticado.
 | `GET` | `/api/receivables/<id>/` | Detalhar boleto. |
 | `GET` | `/api/collections/` | Listar cobranças. |
 | `GET` | `/api/collections/<id>/` | Detalhar cobrança. |
-| `PATCH/PUT` | `/api/collections/<id>/status/` | Atualizar situação de cobrança. |
+| `PATCH` | `/api/collections/<id>/status/` | Atualizar situação de cobrança. |
 | `POST` | `/api/collections/<id>/interactions/` | Registrar contato. |
 | `POST` | `/api/collections/<id>/payment-promises/` | Criar promessa. |
 | `POST` | `/api/collections/<id>/agreements/` | Criar acordo. |
@@ -307,11 +307,10 @@ Todas as APIs usam autenticação de sessão e exigem usuário autenticado.
 | Horário | Tarefa | Função |
 | --- | --- | --- |
 | 06:00 | `verify_expired_promises` | Verifica promessas e acordos descumpridos. |
-| 08:00 | `run_full_collection_pipeline` | Coleta dados, gera relatórios e envia notificações. |
-| 14:00 | `run_supplementary_collection` | Executa coleta complementar. |
-| 23:00 | `run_daily_backup` | Executa backup compatível com o banco configurado. |
+| 07:00 | `run_full_collection_pipeline` | Importa dados, gera seis relatórios e envia e-mails; falhas de coleta ou geração impedem o envio. |
+| 23:00 | `run_daily_backup` | Rotina local; desativada na configuração de produção. |
 
-Os horários seguem `America/Sao_Paulo`.
+Os horários seguem `America/Sao_Paulo`. Em produção, o backup completo de PostgreSQL, mídia e relatórios usa o serviço dedicado do Compose descrito em [deploy-vps.md](deploy-vps.md).
 
 ## 15. Execução local e Docker
 
@@ -334,7 +333,7 @@ docker compose exec web python manage.py migrate
 docker compose ps
 ```
 
-O serviço `web` publica a porta `8000`. Banco, Redis, worker e beat se comunicam pela rede interna do Compose. Para evitar colisão com outro PostgreSQL do host, o banco do CRED-COBR não precisa expor a porta 5432 externamente.
+O Compose padrão é destinado ao ambiente local. Para VPS, use [deploy-vps.md](deploy-vps.md): a aplicação publica apenas em `127.0.0.1:8000` para o proxy HTTPS; PostgreSQL e Redis ficam sem portas públicas.
 
 ## 16. Configuração por ambiente
 
@@ -342,9 +341,9 @@ O serviço `web` publica a porta `8000`. Banco, Redis, worker e beat se comunica
 | --- | --- |
 | `DJANGO_SECRET_KEY` | Chave secreta Django. |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos. |
-| `DATABASE_URL` | Conexão PostgreSQL; sem ela, usa SQLite local. |
+| `DATABASE_URL` ou `APP_DATABASE_*` | Conexão PostgreSQL; SQLite é permitido apenas no desenvolvimento local. |
 | `REDIS_URL` | Broker/cache Redis. |
-| `EMAIL_BACKEND`, `SMTP_*` | Entrega de e-mails. |
+| `EMAIL_BACKEND`, `SMTP_*` | Entrega de e-mails; 587/TLS ou 465/SSL. |
 | `DEFAULT_FROM_EMAIL` | Remetente padrão. |
 | `META_*` | Credenciais e parâmetros da integração WhatsApp. |
 | `REPORTS_DIR` | Diretório de artefatos de relatório. |

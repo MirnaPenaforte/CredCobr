@@ -1,0 +1,12 @@
+services:
+  web:
+    ports: !override
+      - "8002:8000"
+  worker:
+    network_mode: host
+    environment:
+      REDIS_URL: redis://127.0.0.1:6380/0
+      CELERY_BROKER_URL: redis://127.0.0.1:6380/0
+  redis:
+    ports: !override
+      - "127.0.0.1:6380:6379"

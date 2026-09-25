@@ -13,7 +13,7 @@ from shared.dates import parse_date
 
 
 def scoped_reports(request):
-    queryset = ReportExecution.objects.select_related("state")
+    queryset = ReportExecution.objects.filter(status=ReportExecution.Status.COMPLETED).select_related("state")
     if can_access_all_states(request.user):
         return queryset
     allowed = request.user.authorized_states.all()
@@ -46,6 +46,5 @@ class ReportGenerateView(APIView):
         executions = generate_all_reports(
             reference_date=target_date,
             states=[state.upper()] if state else None,
-            include_pdf=bool(request.data.get("pdf", False)),
         )
         return Response(ReportExecutionSerializer(executions, many=True, context={"request": request}).data, status=status.HTTP_201_CREATED)

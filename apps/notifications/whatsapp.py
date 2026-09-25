@@ -80,7 +80,7 @@ class WhatsAppClient:
             state_code,
             report_date,
             str(indicators.get("portfolio_total", "0")),
-            str(indicators.get("overdue_over_ten", "0")),
+            str(indicators.get("overdue_over_five", "0")),
             str(indicators.get("delinquency_percentage", "0")),
         ]
         return self.send_template(

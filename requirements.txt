@@ -34,3 +34,6 @@ celery>=5.4,<6.0
 redis>=5.0,<6.0
 django-celery-beat>=2.7,<3.0
 django-celery-results>=2.6,<3.0
+gunicorn>=23,<24
+whitenoise>=6,<7
+xlrd>=2,<3

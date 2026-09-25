@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import os
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from apps.imports.adapters.sql import LegacySqlAdapter
-from apps.imports.services import persist_records
-from apps.imports.tasks import LEGACY_DATABASE_VIEW, build_legacy_query
+from apps.imports.models import ImportBatch
+from apps.imports.tasks import LEGACY_DATABASE_VIEW, _run_adapter, build_legacy_query
 from apps.reports.services import generate_all_reports
 
 
@@ -36,9 +36,14 @@ class Command(BaseCommand):
                         schema_view=LEGACY_DATABASE_VIEW,
                         query_builder=None if custom_query else build_legacy_query,
                     )
-                    persist_records(adapter.fetch())
+                    result = _run_adapter(ImportBatch.Source.LEGACY, adapter)
+                    self.stdout.write(f"Coleta legada: batch {result['batch_id']} - {result['status']} ({result['imported_rows']} títulos)")
+                    if result["status"] != "completed" or result["imported_rows"] <= 0:
+                        raise CommandError("Coleta legada não trouxe títulos; relatórios não foram gerados")
+                except CommandError:
+                    raise
                 except Exception as exc:
-                    self.stdout.write(self.style.WARNING(f"Falha no banco legado: {exc}"))
+                    raise CommandError(f"Falha no banco legado: {exc}") from exc
         states = [state] if state else ["CE", "BA", "PE"]
         generate_all_reports(states=states)
         self.stdout.write(self.style.SUCCESS(f"Pipeline concluido para {', '.join(states)}"))

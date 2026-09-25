@@ -1,24 +1,30 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+import os
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from pathlib import Path
 
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Exists, Max, Min, OuterRef, Q, Sum
+from django.db.models import Count, DecimalField, Exists, Max, Min, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from apps.accounts.permissions import can_access_all_states, can_manage_collections, filter_by_state_scope
-from apps.collections.models import CollectionStatus, PaymentAgreement, PaymentPromise
+from apps.collections.models import AgreementInstallment, CollectionStatus, PaymentAgreement, PaymentPromise
 from apps.collections.services import create_agreement, register_payment_promise, update_status
 from apps.companies.models import Company, EconomicGroup, State
 from apps.customers.models import Customer
 from apps.imports.models import ImportBatch
 from apps.notifications.models import Notification
-from apps.processing.services import calculate_indicators, calculate_overdue_days, calculate_receivable_overdue_days, calculate_overdue_bands, classify_overdue_days, consolidate_by_state, top_general_customers, top_groups
+from apps.processing.services import calculate_receivable_overdue_days
 from apps.receivables.models import Receivable
 from apps.reports.models import ReportExecution
 from shared.dates import format_date, parse_date
@@ -30,26 +36,135 @@ def _visible_states(user):
     return State.objects.all()
 
 
+MONEY_FIELD = DecimalField(max_digits=18, decimal_places=2)
+
+
+def _money_sum(field: str, condition: Q | None = None):
+    return Coalesce(Sum(field, filter=condition), Value(Decimal("0")), output_field=MONEY_FIELD)
+
+
+def _indicator_row(row: dict[str, object] | None = None) -> dict[str, object]:
+    row = row or {}
+    portfolio_total = row.get("portfolio_total") or Decimal("0")
+    overdue_total = row.get("overdue_total") or Decimal("0")
+    delinquency = (overdue_total / portfolio_total * Decimal("100")) if portfolio_total else Decimal("0")
+    return {
+        "portfolio_total": portfolio_total,
+        "overdue_total": overdue_total,
+        "overdue_over_five": overdue_total,
+        "delinquency_percentage": delinquency.quantize(Decimal("0.01")),
+        "title_count": row.get("title_count") or 0,
+    }
+
+
+def _dashboard_totals(queryset, reference_date: date) -> tuple[dict[str, object], dict[str, dict[str, object]], dict[str, Decimal]]:
+    cutoff_5 = reference_date - timedelta(days=5)
+    rows = list(queryset.values("company__state__code").annotate(
+        portfolio_total=_money_sum("outstanding_amount"),
+        overdue_total=_money_sum("outstanding_amount", Q(due_date__lte=cutoff_5)),
+        days_5_10=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=10), cutoff_5),
+        )),
+        days_11_30=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=30), reference_date - timedelta(days=11)),
+        )),
+        days_31_90=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=90), reference_date - timedelta(days=31)),
+        )),
+        days_91_360=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=360), reference_date - timedelta(days=91)),
+        )),
+        title_count=Count("id"),
+    ))
+    rows_by_code = {row["company__state__code"]: row for row in rows}
+    by_state = {code: _indicator_row(rows_by_code.get(code)) for code in ("CE", "BA", "PE")}
+    indicators = _indicator_row({
+        "portfolio_total": sum((item["portfolio_total"] for item in by_state.values()), Decimal("0")),
+        "overdue_total": sum((item["overdue_total"] for item in by_state.values()), Decimal("0")),
+        "title_count": sum(item["title_count"] for item in by_state.values()),
+    })
+    overdue_bands = {
+        name: sum((row.get(name) or Decimal("0") for row in rows), Decimal("0"))
+        for name in ("overdue_total", "days_5_10", "days_11_30", "days_31_90", "days_91_360")
+    }
+    return indicators, by_state, overdue_bands
+
+
+def _state_rankings(queryset, reference_date: date) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    current_promises = PaymentPromise.objects.filter(
+        status=PaymentPromise.Status.PENDING,
+        promised_date__gte=reference_date,
+    ).values("receivable__customer_id")
+    overdue_installments = AgreementInstallment.objects.filter(
+        agreement_id=OuterRef("pk"), due_date__lt=reference_date, paid_at__isnull=True,
+    )
+    current_agreements = PaymentAgreement.objects.filter(
+        status=PaymentAgreement.Status.ACTIVE,
+    ).annotate(has_overdue=Exists(overdue_installments)).filter(
+        has_overdue=False,
+    ).values("receivable__customer_id")
+    eligible = queryset.filter(
+        due_date__lt=reference_date - timedelta(days=30),
+        financial_status__in=(Receivable.FinancialStatus.OPEN, Receivable.FinancialStatus.PARTIALLY_PAID),
+        balance_with_interest__gt=0,
+    ).exclude(
+        customer_id__in=Subquery(current_promises),
+    ).exclude(
+        customer_id__in=Subquery(current_agreements),
+    )
+    groups = list(eligible.values(
+        "customer__economic_group_id", "customer__economic_group__name",
+    ).annotate(amount=_money_sum("balance_with_interest")).order_by("-amount", "customer__economic_group__name")[:10])
+    group_ranking = [{
+        "group_id": item["customer__economic_group_id"],
+        "group": item["customer__economic_group__name"] or "SEM GRUPO",
+        "amount": item["amount"],
+    } for item in groups]
+    customers = list(eligible.filter(
+        customer__economic_group__name__iexact="clientes geral",
+    ).values("customer_id", "customer__name").annotate(
+        amount=_money_sum("balance_with_interest"),
+    ).order_by("-amount", "customer__name")[:10])
+    customer_ranking = [{
+        "customer_id": item["customer_id"], "customer": item["customer__name"], "amount": item["amount"],
+    } for item in customers]
+    return group_ranking, customer_ranking
+
+
+def _parse_report_date(value: str) -> date | None:
+    value = (value or "").strip()
+    if not value:
+        return None
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError("Data inválida")
+
+
 @login_required
 def home(request):
-    receivables = filter_by_state_scope(Receivable.objects.select_related("company__state", "customer"), request.user)
-    indicators = calculate_indicators(receivables, date.today())
+    reference_date = timezone.localdate()
+    receivables = filter_by_state_scope(Receivable.objects.all(), request.user)
+    indicators, by_state, overdue_bands = _dashboard_totals(receivables, reference_date)
     promises = filter_by_state_scope(PaymentPromise.objects.all(), request.user, field="receivable__company__state")
-    by_state = consolidate_by_state(receivables, date.today())
-    for state_code in ("CE", "BA", "PE"):
-        by_state.setdefault(state_code, calculate_indicators([], date.today()))
     state_comparison = [{"state": code, "delinquency": str(by_state.get(code, {}).get("delinquency_percentage", 0))} for code in ("CE", "BA", "PE")]
-    overdue_bands = calculate_overdue_bands(receivables, date.today())
     agreements = filter_by_state_scope(PaymentAgreement.objects.all(), request.user, field="receivable__company__state").filter(created_by__role="manager").count()
+    latest_import = ImportBatch.objects.filter(
+        source=ImportBatch.Source.LEGACY,
+        status=ImportBatch.Status.COMPLETED,
+        finished_at__isnull=False,
+    ).order_by("-finished_at").first()
     return render(request, "dashboard/home.html", {
         "indicators": indicators,
         "by_state": by_state,
         "state_comparison": state_comparison,
         "states": _visible_states(request.user),
-        "expired_promises": promises.filter(promised_date__lt=date.today(), status=PaymentPromise.Status.PENDING).count(),
+        "expired_promises": promises.filter(promised_date__lt=reference_date, status=PaymentPromise.Status.PENDING).count(),
         "overdue_bands": overdue_bands,
         "agreements_count": agreements,
-        "last_update": receivables.aggregate(value=Max("updated_at"))["value"],
+        "last_update": latest_import.finished_at if latest_import else receivables.aggregate(last_update=Max("updated_at"))["last_update"],
         "failed_imports": ImportBatch.objects.filter(status=ImportBatch.Status.FAILED).count(),
         "failed_notifications": Notification.objects.filter(status=Notification.Status.FAILED).count(),
     })
@@ -57,17 +172,16 @@ def home(request):
 
 @login_required
 def state_dashboard(request, code: str):
+    reference_date = timezone.localdate()
     state = get_object_or_404(State, code=code.upper())
-    receivables = list(filter_by_state_scope(
-        Receivable.objects.select_related("company__state", "customer__economic_group")
-        .prefetch_related("payment_promises", "agreements__installments"), request.user
-    ).filter(company__state=state))
-    groups = top_groups(receivables)
+    receivables = filter_by_state_scope(Receivable.objects.all(), request.user).filter(company__state=state)
+    indicators, _, _ = _dashboard_totals(receivables, reference_date)
+    groups, general_customers = _state_rankings(receivables, reference_date)
     return render(request, "dashboard/state.html", {
         "state": state,
-        "indicators": calculate_indicators(receivables, date.today()),
+        "indicators": indicators,
         "groups": groups,
-        "general_customers": top_general_customers(receivables, reference_date=date.today()),
+        "general_customers": general_customers,
     })
 
 
@@ -75,7 +189,8 @@ def _apply_maturity_filter(queryset, maturity: str):
     today = date.today()
     ranges = {
         "current": {"due_date__gte": today},
-        "overdue": {"due_date__lt": today},
+        "overdue": {"due_date__lt": today - timedelta(days=4)},
+        "5_10": {"due_date__range": (today - timedelta(days=10), today - timedelta(days=5))},
         "11_30": {"due_date__range": (today - timedelta(days=30), today - timedelta(days=11))},
         "31_90": {"due_date__range": (today - timedelta(days=90), today - timedelta(days=31))},
         "91_360": {"due_date__range": (today - timedelta(days=360), today - timedelta(days=91))},
@@ -121,10 +236,10 @@ def receivable_list(request):
     customers = queryset.values(
         "customer_id", "customer__identifier", "customer__name", "customer__economic_group__name"
     ).annotate(
-        overdue_titles=Count("id", filter=Q(due_date__lt=date.today())),
+        overdue_titles=Count("id", filter=Q(due_date__lt=date.today() - timedelta(days=4))),
         oldest_due_date=Min("due_date"),
-        interest_amount=Sum("interest_amount", filter=Q(due_date__lt=date.today())),
-        balance_with_interest=Sum("balance_with_interest", filter=Q(due_date__lt=date.today())),
+        interest_amount=Sum("interest_amount", filter=Q(due_date__lt=date.today() - timedelta(days=4))),
+        balance_with_interest=Sum("balance_with_interest", filter=Q(due_date__lt=date.today() - timedelta(days=4))),
         has_agreement=Exists(PaymentAgreement.objects.filter(
             receivable__customer_id=OuterRef("customer_id"), status=PaymentAgreement.Status.ACTIVE,
         )),
@@ -141,7 +256,7 @@ def receivable_list(request):
     for item in page.object_list:
         due_days = (date.today() - item["oldest_due_date"]).days if item["oldest_due_date"] < date.today() else 0
         urgent_days = due_days
-        if 0 < urgent_days <= 10:
+        if 5 <= urgent_days <= 10:
             item["urgent_color"] = "green"
         elif 10 < urgent_days <= 30:
             item["urgent_color"] = "yellow"
@@ -163,7 +278,7 @@ def receivable_list(request):
 
 @login_required
 def customer_receivables_detail(request, pk: int):
-    customer = get_object_or_404(Customer, pk=pk)
+    customer = get_object_or_404(exclude_hidden_customers(Customer.objects.all(), relation=None), pk=pk)
     receivables = filter_by_state_scope(
         Receivable.objects.select_related("company__state", "collection_status").prefetch_related("payment_promises", "agreements").filter(customer=customer),
         request.user,
@@ -230,7 +345,7 @@ def customer_receivables_detail(request, pk: int):
         item.is_selected = str(item.pk) in selected_ids
         overdue_days = calculate_receivable_overdue_days(item, date.today())
         if 0 < overdue_days <= 10:
-            item.overdue_color, item.overdue_label = "green", "Até 10 dias"
+            item.overdue_color, item.overdue_label = "green", "5 a 10 dias"
         elif 10 < overdue_days <= 30:
             item.overdue_color, item.overdue_label = "yellow", "11 a 30 dias"
         elif 30 < overdue_days <= 90:
@@ -323,86 +438,49 @@ def receivable_detail(request, pk: int):
 
 @login_required
 def report_list(request):
-    band_choices = ReportExecution.Band.choices
-    valid_bands = {value for value, _ in band_choices}
-    selected_band = request.GET.get("band", "")
-    if selected_band and selected_band not in valid_bands:
-        selected_band = ""
+    report_types = [ReportExecution.Type.STATE_EXCEL, ReportExecution.Type.UPCOMING_EXCEL]
 
     selected_state = request.GET.get("state", "").upper()
     if selected_state not in {"CE", "BA", "PE"}:
         selected_state = ""
     selected_date = request.GET.get("report_date", "")
     try:
-        report_date = parse_date(selected_date) if selected_date else None
-        selected_date = format_date(report_date) if report_date else ""
+        report_date = _parse_report_date(selected_date) if selected_date else None
+        selected_date = report_date.strftime("%d/%m/%Y") if report_date else ""
     except ValueError:
         selected_date = ""
         report_date = None
 
-    report_base = ReportExecution.objects.filter(
-        report_type=ReportExecution.Type.BAND_EXCEL,
+    base = ReportExecution.objects.filter(
+        report_type__in=report_types,
         status=ReportExecution.Status.COMPLETED,
-    )
-    band_queryset = report_base.select_related("state")
-    if selected_band:
-        band_queryset = band_queryset.filter(overdue_band=selected_band)
-    if selected_state:
-        band_queryset = band_queryset.filter(state__code=selected_state)
-    if report_date:
-        band_queryset = band_queryset.filter(report_date=report_date)
-
-    bands_queryset = report_base
-    if selected_state:
-        bands_queryset = bands_queryset.filter(state__code=selected_state)
-    if report_date:
-        bands_queryset = bands_queryset.filter(report_date=report_date)
-    available_bands = {value for value in bands_queryset.values_list("overdue_band", flat=True)}
-
-    states_queryset = report_base
-    if selected_band:
-        states_queryset = states_queryset.filter(overdue_band=selected_band)
-    if report_date:
-        states_queryset = states_queryset.filter(report_date=report_date)
-    available_states = set(states_queryset.values_list("state__code", flat=True))
-
-    dates_queryset = report_base
-    if selected_band:
-        dates_queryset = dates_queryset.filter(overdue_band=selected_band)
-    if selected_state:
-        dates_queryset = dates_queryset.filter(state__code=selected_state)
-    available_dates = [
-        format_date(item)
-        for item in sorted(set(dates_queryset.values_list("report_date", flat=True)))
-    ]
-    band_queryset = band_queryset.order_by("state__code", "-report_date")
-    latest_by_state = {}
-    for report in band_queryset:
-        latest_by_state.setdefault((report.state.code, report.overdue_band), report)
-
-    other_reports = ReportExecution.objects.exclude(
-        report_type=ReportExecution.Type.BAND_EXCEL
     ).select_related("state")
+
+    available_states = set(base.values_list("state__code", flat=True))
+    available_dates = [item.strftime("%d/%m/%Y") for item in sorted(set(base.values_list("report_date", flat=True)))]
+
+    queryset = base
     if selected_state:
-        other_reports = other_reports.filter(Q(state__code=selected_state) | Q(state__isnull=True))
+        queryset = queryset.filter(state__code=selected_state)
     if report_date:
-        other_reports = other_reports.filter(report_date=report_date)
-    other_reports = other_reports.order_by("-created_at")[:20]
-    reports = list(latest_by_state.values())
-    labels = dict(band_choices)
+        queryset = queryset.filter(report_date=report_date)
+
+    latest: dict[tuple[str, str], ReportExecution] = {}
+    for report in queryset.order_by("state__code", "report_type", "-report_date"):
+        latest.setdefault((report.state.code, report.report_type), report)
+
+    reports = list(latest.values())
+    for report in reports:
+        report.type_label = (
+            "Vencidos" if report.report_type == ReportExecution.Type.STATE_EXCEL else "A vencer"
+        )
     return render(request, "reports/list.html", {
-        "band_choices": band_choices,
-        "available_bands": available_bands,
+        "reports": reports,
         "states": ("CE", "BA", "PE"),
         "available_states": available_states,
         "available_dates": available_dates,
-        "selected_band": selected_band,
-        "selected_band_label": labels.get(selected_band, "Todas as faixas"),
         "selected_state": selected_state,
         "selected_date": selected_date,
-        "band_reports": reports,
-        "band_report_count": len(reports),
-        "other_reports": other_reports,
     })
 
 
@@ -414,21 +492,19 @@ def report_download(request, pk: int):
     report = get_object_or_404(queryset)
     if not report.file_path:
         raise Http404
-    try:
-        return FileResponse(open(report.file_path, "rb"), as_attachment=True)
-    except OSError as exc:
-        raise Http404 from exc
-
-
-@login_required
-def report_pdf(request, pk: int):
-    queryset = ReportExecution.objects.filter(pk=pk, status=ReportExecution.Status.COMPLETED)
-    if not can_access_all_states(request.user):
-        queryset = queryset.filter(Q(state__in=request.user.authorized_states.all()) | Q(state__isnull=True))
-    report = get_object_or_404(queryset)
-    if not report.pdf_file_path:
-        raise Http404
-    try:
-        return FileResponse(open(report.pdf_file_path, "rb"), content_type="application/pdf")
-    except OSError as exc:
-        raise Http404 from exc
+    stored_path = Path(report.file_path)
+    candidates = [stored_path]
+    reports_dir = Path(os.getenv("REPORTS_DIR", "reports"))
+    fallback_path = reports_dir / stored_path.name
+    if fallback_path != stored_path:
+        candidates.append(fallback_path)
+    for candidate in candidates:
+        try:
+            return FileResponse(
+                candidate.open("rb"),
+                as_attachment=True,
+                filename=stored_path.name,
+            )
+        except OSError:
+            continue
+    raise Http404

@@ -30,4 +30,8 @@ def release_lock(lock_name: str) -> None:
 @contextlib.contextmanager
 def task_lock(lock_name: str, timeout: int = DEFAULT_LOCK_TIMEOUT) -> Generator[bool, None, None]:
     acquired = acquire_lock(lock_name, timeout)
-    yield acquired
+    try:
+        yield acquired
+    finally:
+        if acquired:
+            release_lock(lock_name)

@@ -7,7 +7,7 @@ Sistema de gestão de cobrança construído em Django. Centraliza importações,
 - Gestão de clientes, empresas, títulos a receber e atividades de cobrança;
 - Importação e normalização de dados de sistemas legados;
 - Painel com indicadores operacionais e filtros por estado;
-- Relatórios de inadimplência em Excel e PDF para CE, BA e PE;
+- Relatórios de cobrança em Excel para CE, BA e PE;
 - Registro auditável de execuções, notificações e tentativas de envio;
 - API autenticada, área administrativa e controle de permissões;
 - Processamento assíncrono com Celery e agendamento com Celery Beat.
@@ -107,14 +107,18 @@ docker compose up --build
 
 O Compose disponibiliza aplicação web, PostgreSQL, Redis, worker Celery e agendador. Os volumes de relatórios e importações são persistidos fora do código versionado.
 
+Para implantação em VPS própria, consulte [docs/deploy-vps.md](docs/deploy-vps.md).
+Use o Compose de produção indicado nesse guia; o Compose padrão e seu override
+são para o ambiente local.
+
 ## Operação
 
 Gere relatórios para todos os estados ou para um estado específico:
 
 ```bash
 python manage.py generate_collection_reports
-python manage.py generate_collection_reports --state CE --pdf
-python manage.py generate_collection_reports --date 09/08/2026
+python manage.py generate_collection_reports --state CE
+python manage.py generate_collection_reports --date 2026-09-08
 ```
 
 Execute o pipeline de coleta, processamento e relatórios:

@@ -14,6 +14,7 @@ if ENV_FILE.exists():
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-development-only")
 DEBUG = False
+TESTING = os.getenv("DJANGO_TESTING", "false").lower() == "true"
 ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if host]
 
 INSTALLED_APPS = [
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -74,10 +76,20 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {"timeout": 30},
     }
 }
 
-if os.getenv("DATABASE_URL", "").startswith("postgres"):
+if os.getenv("APP_DATABASE_HOST"):
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("APP_DATABASE_NAME", "cred_cobr"),
+        "USER": os.getenv("APP_DATABASE_USER", "cred_cobr"),
+        "PASSWORD": os.getenv("APP_DATABASE_PASSWORD", ""),
+        "HOST": os.environ["APP_DATABASE_HOST"],
+        "PORT": int(os.getenv("APP_DATABASE_PORT", "5432")),
+    }
+elif os.getenv("DATABASE_URL", "").startswith("postgres"):
     from urllib.parse import urlparse
 
     database_url = urlparse(os.environ["DATABASE_URL"])
@@ -112,6 +124,7 @@ NUMBER_GROUPING = 3
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {"staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}}
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -133,12 +146,14 @@ REST_FRAMEWORK = {
 }
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("SMTP_HOST", "localhost")
-EMAIL_PORT = int(os.getenv("SMTP_PORT", "587"))
+EMAIL_HOST = os.getenv("SMTP_HOST", "")
+EMAIL_PORT = int(os.getenv("SMTP_PORT") or "587")
 EMAIL_HOST_USER = os.getenv("SMTP_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "cred-cobr@localhost")
+EMAIL_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "cred-cobr@localhost")
+EMAIL_MAX_ATTACHMENT_BYTES = int(os.getenv("EMAIL_MAX_ATTACHMENT_BYTES", str(18 * 1024 * 1024)))
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
@@ -177,6 +192,7 @@ else:
     }
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL or "memory://")
+CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", str(not bool(REDIS_URL)).lower()) == "true"
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = "default"
@@ -193,12 +209,7 @@ from celery.schedules import crontab  # noqa: E402
 CELERY_BEAT_SCHEDULE = {
     "morning-collection-pipeline": {
         "task": "core.tasks.run_full_collection_pipeline",
-        "schedule": crontab(hour=8, minute=0),
-        "options": {"queue": "default"},
-    },
-    "afternoon-supplementary-collection": {
-        "task": "core.tasks.run_supplementary_collection",
-        "schedule": crontab(hour=14, minute=0),
+        "schedule": crontab(hour=7, minute=0),
         "options": {"queue": "default"},
     },
     "verify-expired-promises": {
