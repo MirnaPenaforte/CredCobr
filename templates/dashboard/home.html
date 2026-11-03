@@ -1,7 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Visão geral | CRED-COBR{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">RESUMO EXECUTIVO</p><h1>Visão geral</h1><p class="data-update">Atualização: {% if last_update %}{{ last_update|date:"d/m/y H:i" }}{% else %}—{% endif %}</p></div></div>
+<div class="page-heading dashboard-heading">
+  <div class="dashboard-heading-copy">
+    <p class="eyebrow">RESUMO EXECUTIVO</p>
+    <h1>Visão geral</h1>
+    <p class="data-update">Última atualização concluída: {% if last_update %}{{ last_update|date:"d/m/Y H:i" }}{% else %}—{% endif %}</p>
+    {% if can_update_database and latest_collection %}
+      {% if collection_status == "processing" %}
+        <p class="data-sync-status" role="status">Coleta em andamento desde {{ latest_collection.started_at|date:"d/m/Y H:i" }}.</p>
+      {% elif collection_status == "failed" %}
+        <p class="data-sync-status data-sync-error" role="alert">Tentativa de {{ latest_collection.finished_at|date:"d/m/Y H:i" }} falhou. {{ collection_error }}</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% if can_update_database %}
+  <form class="dashboard-update-form" method="post" action="{% url 'update-database' %}" data-prevent-double-submit>
+    {% csrf_token %}
+    <button class="btn btn-primary" type="submit" {% if collection_status == "processing" %}disabled{% endif %}>Atualizar base de dados</button>
+  </form>
+  {% endif %}
+</div>
 <section class="metric-grid" aria-label="Indicadores de vencimento">
   <article class="metric-card"><span>Vencido total</span><strong>R$ {{ overdue_bands.overdue_total|floatformat:"2gu" }}</strong></article>
   <article class="metric-card"><span>Vencido de 5 a 10 dias</span><strong>R$ {{ overdue_bands.days_5_10|floatformat:"2gu" }}</strong></article>

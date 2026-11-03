@@ -1,10 +1,11 @@
 from django.urls import path
 
-from .views import customer_receivables_detail, home, receivable_detail, receivable_list, report_download, report_list, state_dashboard
+from .views import customer_receivables_detail, home, receivable_detail, receivable_list, report_download, report_list, state_dashboard, update_database
 
 
 urlpatterns = [
     path("", home, name="home"),
+    path("update-database/", update_database, name="update-database"),
     path("states/<str:code>/", state_dashboard, name="state-dashboard"),
     path("receivables/", receivable_list, name="receivable-list"),
     path("receivables/customers/<int:pk>/", customer_receivables_detail, name="customer-receivables-detail"),

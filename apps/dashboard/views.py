@@ -11,18 +11,20 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, DecimalField, Exists, Max, Min, OuterRef, Q, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, Exists, Min, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from apps.accounts.permissions import can_access_all_states, can_manage_collections, filter_by_state_scope
+from apps.accounts.permissions import can_access_all_states, can_manage_collections, filter_by_state_scope, is_administrator
 from apps.collections.models import AgreementInstallment, CollectionStatus, PaymentAgreement, PaymentPromise
 from apps.collections.services import create_agreement, register_payment_promise, update_status
 from apps.companies.models import Company, EconomicGroup, State
 from apps.customers.models import Customer
 from apps.imports.models import ImportBatch
+from apps.imports.tasks import collect_from_legacy_database
 from apps.notifications.models import Notification
 from apps.processing.services import calculate_receivable_overdue_days
 from apps.receivables.models import Receivable
@@ -156,6 +158,15 @@ def home(request):
         status=ImportBatch.Status.COMPLETED,
         finished_at__isnull=False,
     ).order_by("-finished_at").first()
+    latest_collection = ImportBatch.objects.filter(source=ImportBatch.Source.LEGACY).order_by("-created_at").first()
+    collection_error = None
+    if latest_collection and latest_collection.status == ImportBatch.Status.FAILED:
+        error = latest_collection.error_message.lower()
+        collection_error = (
+            "Não foi possível conectar ao banco de origem. Verifique a conexão e tente novamente."
+            if "unable to connect" in error or "timed out" in error or "connection" in error
+            else "A coleta falhou. Consulte os registros do servidor e tente novamente."
+        )
     return render(request, "dashboard/home.html", {
         "indicators": indicators,
         "by_state": by_state,
@@ -164,10 +175,34 @@ def home(request):
         "expired_promises": promises.filter(promised_date__lt=reference_date, status=PaymentPromise.Status.PENDING).count(),
         "overdue_bands": overdue_bands,
         "agreements_count": agreements,
-        "last_update": latest_import.finished_at if latest_import else receivables.aggregate(last_update=Max("updated_at"))["last_update"],
+        "last_update": latest_import.finished_at if latest_import else None,
+        "can_update_database": is_administrator(request.user),
+        "collection_status": latest_collection.status if latest_collection else None,
+        "latest_collection": latest_collection,
+        "collection_error": collection_error,
         "failed_imports": ImportBatch.objects.filter(status=ImportBatch.Status.FAILED).count(),
         "failed_notifications": Notification.objects.filter(status=Notification.Status.FAILED).count(),
     })
+
+
+@login_required
+@require_POST
+def update_database(request):
+    if not is_administrator(request.user):
+        raise PermissionDenied
+    if ImportBatch.objects.filter(source=ImportBatch.Source.LEGACY, status=ImportBatch.Status.PROCESSING).exists():
+        messages.error(request, "A atualização da base de dados já está em andamento.")
+        return redirect("home")
+    try:
+        result = collect_from_legacy_database.delay()
+    except Exception:
+        messages.error(request, "Não foi possível iniciar a atualização da base de dados. Tente novamente.")
+    else:
+        if getattr(result, "state", None) == "FAILURE":
+            messages.error(request, "A atualização falhou. Consulte o status da coleta nesta página.")
+        else:
+            messages.success(request, "Atualização da base de dados iniciada. Recarregue a página para acompanhar o resultado.")
+    return redirect("home")
 
 
 @login_required
