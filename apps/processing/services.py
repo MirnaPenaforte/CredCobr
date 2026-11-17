@@ -15,11 +15,10 @@ from apps.receivables.models import Receivable
 
 class OverdueBand(StrEnum):
     CURRENT = "current"
-    DAYS_5_10 = "5_10"
+    DAYS_3_10 = "3_10"
     DAYS_11_30 = "11_30"
-    DAYS_31_90 = "31_90"
-    DAYS_91_360 = "91_360"
-    OVER_360 = "over_360"
+    DAYS_31_59 = "31_59"
+    DAYS_60_PLUS = "60_plus"
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,17 +38,15 @@ def calculate_receivable_overdue_days(receivable: Receivable, reference_date: da
 
 
 def classify_overdue_days(days: int) -> OverdueBand:
-    if days < 5:
+    if days < 3:
         return OverdueBand.CURRENT
     if days <= 10:
-        return OverdueBand.DAYS_5_10
+        return OverdueBand.DAYS_3_10
     if days <= 30:
         return OverdueBand.DAYS_11_30
-    if days <= 90:
-        return OverdueBand.DAYS_31_90
-    if days <= 360:
-        return OverdueBand.DAYS_91_360
-    return OverdueBand.OVER_360
+    if days <= 59:
+        return OverdueBand.DAYS_31_59
+    return OverdueBand.DAYS_60_PLUS
 
 
 def classify_receivables(receivables: Iterable[Receivable], reference_date: date) -> list[ReceivableClassification]:

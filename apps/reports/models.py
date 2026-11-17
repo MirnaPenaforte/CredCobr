@@ -9,10 +9,10 @@ class ReportExecution(TimestampedModel):
         UPCOMING_EXCEL = "upcoming_excel", "Excel a vencer"
 
     class Band(models.TextChoices):
-        DAYS_5_10 = "5_10", "De 5 a 10 dias"
+        DAYS_3_10 = "3_10", "De 3 a 10 dias"
         DAYS_11_30 = "11_30", "De 11 a 30 dias"
-        DAYS_31_90 = "31_90", "De 31 a 90 dias"
-        DAYS_91_360 = "91_360", "De 91 a 360 dias"
+        DAYS_31_59 = "31_59", "De 31 a 59 dias"
+        DAYS_60_PLUS = "60_plus", "60 dias ou mais"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pendente"

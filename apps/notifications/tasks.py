@@ -23,12 +23,12 @@ REPORT_TYPE_LABELS = {
     ReportExecution.Type.UPCOMING_EXCEL: "Boletos a vencer",
 }
 DELIVERY_REPORT_TYPES = (ReportExecution.Type.STATE_EXCEL, ReportExecution.Type.UPCOMING_EXCEL)
-OVERDUE_BAND_SUBJECT = "5-10 dias, 11-30 dias, 31-90 dias, 91-360 dias"
+OVERDUE_BAND_SUBJECT = "3-10 dias, 11-30 dias, 31-59 dias, 60 dias ou mais"
 OVERDUE_BANDS = {
-    "5_10": "5-10 dias",
+    "3_10": "3-10 dias",
     "11_30": "11-30 dias",
-    "31_90": "31-90 dias",
-    "91_360": "91-360 dias",
+    "31_59": "31-59 dias",
+    "60_plus": "60 dias ou mais",
 }
 
 

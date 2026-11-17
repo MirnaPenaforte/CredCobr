@@ -12,20 +12,20 @@ SUMMARY_SHEET = "Resumo"
 DUPLICATES_SHEET = "Todas as duplicatas"
 ALWAYS_SHEETS = (SUMMARY_SHEET, DUPLICATES_SHEET)
 BAND_GROUPS = (
-    ("5_10", "11_30"),
-    ("31_90", "91_360"),
+    ("3_10", "11_30"),
+    ("31_59", "60_plus"),
 )
 BAND_TAB_COLORS = {
-    "5_10": "0CA30C",
+    "3_10": "0CA30C",
     "11_30": "D9A300",
-    "31_90": "E87511",
-    "91_360": "EF8A8A",
+    "31_59": "E87511",
+    "60_plus": "EF8A8A",
 }
 BAND_FILENAME_LABELS = {
-    "5_10": "5-10",
+    "3_10": "3-10",
     "11_30": "11-30",
-    "31_90": "31-90",
-    "91_360": "91-360",
+    "31_59": "31-59",
+    "60_plus": "60-mais",
 }
 
 
@@ -166,7 +166,7 @@ def plan_report_attachments(source: Path | str | None, max_bytes: int | None = N
 
     When the file fits the limit, a single-item list with the original file is
     returned. When it exceeds the limit, the report is split by overdue band:
-    ``5_10``/``11_30`` go in one file and ``31_90``/``91_360`` in another, always
+    ``3_10``/``11_30`` go in one file and ``31_59``/``60_plus`` in another, always
     carrying the ``Resumo`` and ``Todas as duplicatas`` sheets in both. Reports
     without band sheets fall back to a row split.
     """

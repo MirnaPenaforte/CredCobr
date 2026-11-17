@@ -148,11 +148,12 @@ Faixas usadas nos relatórios e indicadores:
 
 | Dias em atraso | Faixa |
 | --- | --- |
-| 5 a 10 | De 5 a 10 dias |
+| 3 a 10 | De 3 a 10 dias |
 | 11 a 30 | De 11 a 30 dias |
-| 31 a 90 | De 31 a 90 dias |
-| 91 a 360 | De 91 a 360 dias |
-| Acima de 360 | Acima de 360 dias |
+| 31 a 59 | De 31 a 59 dias |
+| 60 ou mais | 60 dias ou mais |
+
+O indicador geral de inadimplência continua considerando títulos com pelo menos 5 dias de atraso. As faixas de classificação começam em 3 dias; por isso, o total do indicador pode diferir da soma das faixas.
 
 ## 7. Dashboards e rankings
 
@@ -241,7 +242,7 @@ O alerta depende de e-mail cadastrado no usuário responsável e de SMTP configu
 
 ## 10. Relatórios
 
-O sistema produz, por estado, um Excel de cobrança consolidado com abas Resumo, Todas as duplicatas, 5_10, 11_30, 31_90 e 91_360; e um Excel de títulos a vencer. A coluna "Nome do cliente" não faz parte desses arquivos. Cada execução registra estado, tipo, data de referência, situação, arquivo, checksum, quantidade de linhas e mensagens de erro. Após uma geração concluída, somente a versão mais recente por estado e tipo fica disponível; o histórico de notificações permanece no banco.
+O sistema produz, por estado, um Excel de cobrança consolidado com abas Resumo, Todas as duplicatas, 3_10, 11_30, 31_59 e 60_plus; e um Excel de títulos a vencer. A coluna "Nome do cliente" não faz parte desses arquivos. Cada execução registra estado, tipo, data de referência, situação, arquivo, checksum, quantidade de linhas e mensagens de erro. Após uma geração concluída, somente a versão mais recente por estado e tipo fica disponível; o histórico de notificações permanece no banco.
 
 Comandos úteis:
 

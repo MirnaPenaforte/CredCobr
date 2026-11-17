@@ -64,17 +64,17 @@ def _dashboard_totals(queryset, reference_date: date) -> tuple[dict[str, object]
     rows = list(queryset.values("company__state__code").annotate(
         portfolio_total=_money_sum("outstanding_amount"),
         overdue_total=_money_sum("outstanding_amount", Q(due_date__lte=cutoff_5)),
-        days_5_10=_money_sum("outstanding_amount", Q(
-            due_date__range=(reference_date - timedelta(days=10), cutoff_5),
+        days_3_10=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=10), reference_date - timedelta(days=3)),
         )),
         days_11_30=_money_sum("outstanding_amount", Q(
             due_date__range=(reference_date - timedelta(days=30), reference_date - timedelta(days=11)),
         )),
-        days_31_90=_money_sum("outstanding_amount", Q(
-            due_date__range=(reference_date - timedelta(days=90), reference_date - timedelta(days=31)),
+        days_31_59=_money_sum("outstanding_amount", Q(
+            due_date__range=(reference_date - timedelta(days=59), reference_date - timedelta(days=31)),
         )),
-        days_91_360=_money_sum("outstanding_amount", Q(
-            due_date__range=(reference_date - timedelta(days=360), reference_date - timedelta(days=91)),
+        days_60_plus=_money_sum("outstanding_amount", Q(
+            due_date__lte=reference_date - timedelta(days=60),
         )),
         title_count=Count("id"),
     ))
@@ -87,7 +87,7 @@ def _dashboard_totals(queryset, reference_date: date) -> tuple[dict[str, object]
     })
     overdue_bands = {
         name: sum((row.get(name) or Decimal("0") for row in rows), Decimal("0"))
-        for name in ("overdue_total", "days_5_10", "days_11_30", "days_31_90", "days_91_360")
+        for name in ("overdue_total", "days_3_10", "days_11_30", "days_31_59", "days_60_plus")
     }
     return indicators, by_state, overdue_bands
 
@@ -225,10 +225,10 @@ def _apply_maturity_filter(queryset, maturity: str):
     ranges = {
         "current": {"due_date__gte": today},
         "overdue": {"due_date__lt": today - timedelta(days=4)},
-        "5_10": {"due_date__range": (today - timedelta(days=10), today - timedelta(days=5))},
+        "3_10": {"due_date__range": (today - timedelta(days=10), today - timedelta(days=3))},
         "11_30": {"due_date__range": (today - timedelta(days=30), today - timedelta(days=11))},
-        "31_90": {"due_date__range": (today - timedelta(days=90), today - timedelta(days=31))},
-        "91_360": {"due_date__range": (today - timedelta(days=360), today - timedelta(days=91))},
+        "31_59": {"due_date__range": (today - timedelta(days=59), today - timedelta(days=31))},
+        "60_plus": {"due_date__lte": today - timedelta(days=60)},
     }
     return queryset.filter(**ranges[maturity]) if maturity in ranges else queryset
 
@@ -379,14 +379,14 @@ def customer_receivables_detail(request, pk: int):
     for item in receivables:
         item.is_selected = str(item.pk) in selected_ids
         overdue_days = calculate_receivable_overdue_days(item, date.today())
-        if 0 < overdue_days <= 10:
-            item.overdue_color, item.overdue_label = "green", "5 a 10 dias"
+        if 3 <= overdue_days <= 10:
+            item.overdue_color, item.overdue_label = "green", "3 a 10 dias"
         elif 10 < overdue_days <= 30:
             item.overdue_color, item.overdue_label = "yellow", "11 a 30 dias"
-        elif 30 < overdue_days <= 90:
-            item.overdue_color, item.overdue_label = "orange", "31 a 90 dias"
-        elif overdue_days > 90:
-            item.overdue_color, item.overdue_label = "red", "91 a 360 dias"
+        elif 30 < overdue_days <= 59:
+            item.overdue_color, item.overdue_label = "orange", "31 a 59 dias"
+        elif overdue_days >= 60:
+            item.overdue_color, item.overdue_label = "red", "60 dias ou mais"
         else:
             item.overdue_color, item.overdue_label = "", ""
         collection = getattr(item, "collection_status", None)

@@ -22,11 +22,11 @@
   {% endif %}
 </div>
 <section class="metric-grid" aria-label="Indicadores de vencimento">
-  <article class="metric-card"><span>Vencido total</span><strong>R$ {{ overdue_bands.overdue_total|floatformat:"2gu" }}</strong></article>
-  <article class="metric-card"><span>Vencido de 5 a 10 dias</span><strong>R$ {{ overdue_bands.days_5_10|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido a partir de 5 dias</span><strong>R$ {{ overdue_bands.overdue_total|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 3 a 10 dias</span><strong>R$ {{ overdue_bands.days_3_10|floatformat:"2gu" }}</strong></article>
   <article class="metric-card"><span>Vencido de 11 a 30 dias</span><strong>R$ {{ overdue_bands.days_11_30|floatformat:"2gu" }}</strong></article>
-  <article class="metric-card"><span>Vencido de 31 a 90 dias</span><strong>R$ {{ overdue_bands.days_31_90|floatformat:"2gu" }}</strong></article>
-  <article class="metric-card"><span>Vencido de 91 a 360 dias</span><strong>R$ {{ overdue_bands.days_91_360|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido de 31 a 59 dias</span><strong>R$ {{ overdue_bands.days_31_59|floatformat:"2gu" }}</strong></article>
+  <article class="metric-card"><span>Vencido há 60 dias ou mais</span><strong>R$ {{ overdue_bands.days_60_plus|floatformat:"2gu" }}</strong></article>
 </section>
 <section class="metric-grid" aria-label="Indicadores de operação">
   <article class="metric-card"><span>Promessas vencidas</span><strong>{{ expired_promises }}</strong></article>

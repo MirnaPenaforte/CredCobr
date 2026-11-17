@@ -23,26 +23,25 @@ from apps.receivables.models import Receivable
 from apps.reports.models import ReportExecution
 from apps.reports.retention import supersede_old_reports
 
-SHEETS = ("5_10", "11_30", "31_90", "91_360")
+SHEETS = ("3_10", "11_30", "31_59", "60_plus")
 BAND_LABELS = {
-    "current": "Em dia ou até 4 dias",
-    "5_10": "De 5 a 10 dias",
+    "current": "Em dia ou até 2 dias",
+    "3_10": "De 3 a 10 dias",
     "11_30": "De 11 a 30 dias",
-    "31_90": "De 31 a 90 dias",
-    "91_360": "De 91 a 360 dias",
-    "over_360": "Acima de 360 dias",
+    "31_59": "De 31 a 59 dias",
+    "60_plus": "60 dias ou mais",
 }
 BAND_FILLS = {
-    "5_10": "0CA30C",
+    "3_10": "0CA30C",
     "11_30": "D9A300",
-    "31_90": "E87511",
-    "91_360": "EF8A8A",
+    "31_59": "E87511",
+    "60_plus": "EF8A8A",
 }
 BAND_FILENAME_LABELS = {
-    "5_10": "5-10",
+    "3_10": "3-10",
     "11_30": "11-30",
-    "31_90": "31-90",
-    "91_360": "91-360",
+    "31_59": "31-59",
+    "60_plus": "60-mais",
 }
 TITLE_HEADERS = [
     "ID do título", "Parcela", "ID do cliente", "Grupo",
@@ -114,10 +113,10 @@ def _format_summary(sheet) -> None:
     sheet.column_dimensions["B"].width = 22
     row_fills = {
         6: "6E4B2E",
-        7: BAND_FILLS["5_10"],
+        7: BAND_FILLS["3_10"],
         8: BAND_FILLS["11_30"],
-        9: BAND_FILLS["31_90"],
-        10: BAND_FILLS["91_360"],
+        9: BAND_FILLS["31_59"],
+        10: BAND_FILLS["60_plus"],
     }
     for row, color in row_fills.items():
         label = sheet.cell(row=row, column=1)
@@ -170,11 +169,11 @@ def generate_state_excel(state_code: str, reference_date: date) -> ReportExecuti
         summary.append(["Empresas", "Nova + Multi" if state.code == "PE" else "Todas do estado"])
         summary.append(["Data de referência", reference_date])
         summary.append(["Carteira total", indicators["portfolio_total"]])
-        summary.append(["Vencidos total", overdue_bands["overdue_total"]])
-        summary.append(["Vencidos 5-10 dias", overdue_bands["days_5_10"]])
+        summary.append(["Vencidos a partir de 5 dias", overdue_bands["overdue_total"]])
+        summary.append(["Vencidos 3-10 dias", overdue_bands["days_3_10"]])
         summary.append(["Vencidos 11-30 dias", overdue_bands["days_11_30"]])
-        summary.append(["Vencidos 31-90 dias", overdue_bands["days_31_90"]])
-        summary.append(["Vencidos 91-360 dias", overdue_bands["days_91_360"]])
+        summary.append(["Vencidos 31-59 dias", overdue_bands["days_31_59"]])
+        summary.append(["Vencidos 60 dias ou mais", overdue_bands["days_60_plus"]])
         summary.append(["Inadimplência (%)", indicators["delinquency_percentage"]])
         summary.append(["Quantidade de títulos", indicators["title_count"]])
         _format_summary(summary)
