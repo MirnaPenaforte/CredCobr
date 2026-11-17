@@ -23,6 +23,7 @@ from apps.collections.models import AgreementInstallment, CollectionStatus, Paym
 from apps.collections.services import create_agreement, register_payment_promise, update_status
 from apps.companies.models import Company, EconomicGroup, State
 from apps.customers.models import Customer
+from apps.customers.visibility import exclude_hidden_customers
 from apps.imports.models import ImportBatch
 from apps.imports.tasks import collect_from_legacy_database
 from apps.notifications.models import Notification

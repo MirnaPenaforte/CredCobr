@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load l10n %}
 {% block title %}Boletos | CRED-COBR{% endblock %}
 {% block content %}
 <style>.client-marker{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.client-marker.green{background:#0ca30c}.client-marker.yellow{background:#d9a300}.client-marker.orange{background:#e87511}.client-marker.red{background:#ef8a8a}.negotiation-marker{margin-right:6px}</style>
@@ -6,8 +7,8 @@
 <form class="filter-bar" method="get">
 <label>Pesquisa<input name="q" value="{{ query }}" placeholder="Título, cliente, CPF/CNPJ ou ID"></label>
 <label>Estado<select name="state" onchange="this.form.submit()"><option value="">Todos</option>{% for state in states %}<option value="{{ state.code }}" {% if filters.state == state.code %}selected{% endif %}>{{ state.code }}</option>{% endfor %}</select></label>
-<label>Grupo<select name="group" onchange="this.form.submit()"><option value="">Todos</option>{% for item in groups %}<option value="{{ item.pk }}" {% if filters.group == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
-<label>Gestor responsável<select name="operator" onchange="this.form.submit()"><option value="">Todos</option>{% for item in operators %}<option value="{{ item.pk }}" {% if filters.operator == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.get_full_name|default:item.username }}</option>{% endfor %}</select></label>
+<label>Grupo<select name="group" onchange="this.form.submit()"><option value="">Todos</option>{% for item in groups %}<option value="{{ item.pk|unlocalize }}" {% if filters.group == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
+<label>Gestor responsável<select name="operator" onchange="this.form.submit()"><option value="">Todos</option>{% for item in operators %}<option value="{{ item.pk|unlocalize }}" {% if filters.operator == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.get_full_name|default:item.username }}</option>{% endfor %}</select></label>
 <label>Status<select name="status" onchange="this.form.submit()"><option value="">Todos</option>{% for value,label in collection_statuses %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
 <label>Vencimento<select name="maturity" onchange="this.form.submit()"><option value="">Todos</option><option value="current" {% if filters.maturity == "current" %}selected{% endif %}>Em dia</option><option value="overdue" {% if filters.maturity == "overdue" %}selected{% endif %}>Vencidos há 5+ dias</option><option value="3_10" {% if filters.maturity == "3_10" %}selected{% endif %}>3–10 dias</option><option value="11_30" {% if filters.maturity == "11_30" %}selected{% endif %}>11–30 dias</option><option value="31_59" {% if filters.maturity == "31_59" %}selected{% endif %}>31–59 dias</option><option value="60_plus" {% if filters.maturity == "60_plus" %}selected{% endif %}>60 dias ou mais</option></select></label>
 <label>Previsão<input type="text" name="promised_date" value="{{ filters.promised_date }}" placeholder="MM/DD/AAAA"></label>
